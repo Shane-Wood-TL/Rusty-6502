@@ -1,7 +1,7 @@
 # Rusty-6502
 Emulating a 6502 in Rust
 
-Commands Implemented (3 / 54):
+Commands Implemented (9 / 56):
 To be considered implemeted all versions of the command must also be created
 - [X] LDA
 - [ ] ADC
@@ -17,8 +17,10 @@ To be considered implemeted all versions of the command must also be created
 - [X] BRK
 - [ ] BVC
 - [ ] BVS
-- [ ] CLC
-- [ ] CLD
+- [X] CLC
+- [X] CLD
+- [X] CLI
+- [X] CLV
 - [ ] CMP
 - [ ] CPX
 - [ ] CPY
@@ -34,7 +36,7 @@ To be considered implemeted all versions of the command must also be created
 - [X] LDX
 - [X] LDY
 - [ ] LSR
-- [ ] NOP
+- [X] NOP
 - [ ] ORA
 - [ ] PHA
 - [ ] PHP
