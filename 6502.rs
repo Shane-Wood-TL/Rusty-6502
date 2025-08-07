@@ -1,5 +1,6 @@
 #[repr(u8)]
 enum Opcodes{
+    //LDA commands are implemented, and tested
     LdaImmediate = 0xA9,
     LdaZeropage  = 0xA5,
     LdaZeropageX = 0xB5,
@@ -56,7 +57,11 @@ enum Opcodes{
     
     Clc = 0x18,
     
-    Cld = 0x58,
+    Cld = 0xD8,
+    
+    Cli = 0x58,
+    
+    Clv = 0xB8,
     
     CmpImmediate = 0xC9,
     CmpZeropage = 0xC5,
@@ -107,12 +112,14 @@ enum Opcodes{
     
     JsrAbsolute = 0x20,
     
+    //LDX commands are implemented, not tested
     LdxImmediate = 0xA2,
     LdxZeropage = 0xA6,
     LdxZeropageY = 0xB6,
     LdxAbsolute = 0xAE,
     LdxAbsoluteY = 0xBE,
     
+    //LDY commands are implemented, not tested
     LdyImmediate = 0xA0,
     LdyZeropage = 0xA4,
     LdyZeropageX = 0xB4,
@@ -356,6 +363,16 @@ impl Cpu6502{
             x if x == Opcodes::LdaAbsoluteY as u8 => self.lda_absolute_y(),
             x if x == Opcodes::LdaIndirectX  as u8 => self.lda_indirect_x(),
             x if x == Opcodes::LdaIndirectY  as u8 => self.lda_indirect_y(),
+            x if x == Opcodes::LdxImmediate  as u8 => self.ldx_immediate(),
+            x if x == Opcodes::LdxZeropage  as u8 => self.ldx_zero_page(),
+            x if x == Opcodes::LdxZeropageY  as u8 => self.ldx_zero_page_y(),
+            x if x == Opcodes::LdxAbsolute  as u8 => self.ldx_absolute(),
+            x if x == Opcodes::LdxAbsoluteY  as u8 => self.ldx_absolute_y(),
+            x if x == Opcodes::Nop  as u8 => self.nop(),
+            x if x == Opcodes::Clc  as u8 => self.clc(),
+            x if x == Opcodes::Cld  as u8 => self.cld(),
+            x if x == Opcodes::Cli  as u8 => self.cli(),
+            x if x == Opcodes::Clv  as u8 => self.clv(),
             x if x == Opcodes::BRK as u8 => {println!("BRK"); return -1;}
         _ =>{
             println!("opcode: {:02X}", opcode);
@@ -368,6 +385,7 @@ impl Cpu6502{
     
     
     
+    //LDA Commands
     fn lda_immediate(&mut self){
         let value = self.memory.read_byte(self.registors.pc as u32);
         println!("LDA I");
@@ -381,7 +399,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_zero_page(&mut self){
         println!("lda_zero_page");
         let address = self.memory.read_byte(self.registors.pc as u32);
@@ -395,7 +412,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_zero_page_x(&mut self){
         println!("lda_zero_page");
         let base_address = self.memory.read_byte(self.registors.pc as u32);
@@ -410,7 +426,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_absolute(&mut self){
         println!("lda_absolute");
         let address = self.read_u16(self.registors.pc);
@@ -426,7 +441,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_absolute_x(&mut self){
         println!("lda_absolute_x");
         let address = self.read_u16(self.registors.pc);
@@ -449,7 +463,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_absolute_y(&mut self){
         println!("lda_absolute_y");
         let address = self.read_u16(self.registors.pc);
@@ -472,7 +485,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_indirect_x(&mut self){
         println!("lda_indirect_x");
         self.cycle_count += 6;
@@ -490,7 +502,6 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    
     fn lda_indirect_y(&mut self){
         println!("lda_indirect_y");
         
@@ -513,6 +524,201 @@ impl Cpu6502{
         self.registors.ac = value as i8;
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
+    }
+    
+    //LDX Commands
+    fn ldx_immediate(&mut self){
+        let value = self.memory.read_byte(self.registors.pc as u32);
+        println!("LDX I");
+        self.registors.pc += 1; //LDX immediate takes 2 bytes,
+        //one was already done in step
+        
+        self.registors.x = value as i8;
+        
+        self.cycle_count += 2;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldx_zero_page(&mut self){
+        println!("ldx_zero_page");
+        let address = self.memory.read_byte(self.registors.pc as u32);
+        self.cycle_count += 3;
+        self.registors.pc += 1; //LDA zero page takes 2 bytes, one was already done in step
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        self.registors.x = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldx_zero_page_y(&mut self){
+        println!("ldx_zero_page_y");
+        let base_address = self.memory.read_byte(self.registors.pc as u32);
+        self.cycle_count += 4;
+        self.registors.pc += 1; //LDA zero page takes 2 bytes, one was already done in step
+        
+        let address = base_address.wrapping_add(self.registors.y as u8);
+        
+        let value = self.memory.read_byte(address as u32);
+        self.registors.x = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldx_absolute(&mut self){
+        println!("ldx_absolute");
+        let address = self.read_u16(self.registors.pc);
+        
+        self.registors.pc += 2; //LDX absolute takes 3 bytes, one was already done in step
+        
+        self.cycle_count += 4;
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        self.registors.x = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldx_absolute_y(&mut self){
+        println!("ldx_indirect_y");
+        
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
+        self.registors.pc += 2;
+        
+        let base_address = self.read_u16(zero_page_operand as u16);
+        
+        let effective_address = base_address.wrapping_add(self.registors.y as u16);
+
+        println!("{}",effective_address);
+        if (base_address & 0xFF00) != (effective_address & 0xFF00) {
+            self.cycle_count += 5; // 6 if page boundry is crossed
+        } else{
+            self.cycle_count += 4;  //page boundry is not crossed
+        }
+        
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        self.registors.x = value as i8;
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    
+    //LDY Commands
+    fn ldy_immediate(&mut self){
+        let value = self.memory.read_byte(self.registors.pc as u32);
+        println!("LDY I");
+        self.registors.pc += 1; //LDY immediate takes 2 bytes,
+        //one was already done in step
+        
+        self.registors.y = value as i8;
+        
+        self.cycle_count += 2;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldy_zero_page(&mut self){
+        println!("ldy_zero_page");
+        let address = self.memory.read_byte(self.registors.pc as u32);
+        self.cycle_count += 3;
+        self.registors.pc += 1; //LDA zero page takes 2 bytes, one was already done in step
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        self.registors.y = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldy_zero_page_x(&mut self){
+        println!("ldy_zero_page_x");
+        let base_address = self.memory.read_byte(self.registors.pc as u32);
+        self.cycle_count += 4;
+        self.registors.pc += 1; //LDA zero page takes 2 bytes, one was already done in step
+        
+        let address = base_address.wrapping_add(self.registors.x as u8);
+        
+        let value = self.memory.read_byte(address as u32);
+        self.registors.y = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldy_absolute(&mut self){
+        println!("ldy_absolute");
+        let address = self.read_u16(self.registors.pc);
+        
+        self.registors.pc += 2; //LDy absolute takes 3 bytes, one was already done in step
+        
+        self.cycle_count += 4;
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        self.registors.y = value as i8;
+        
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    fn ldy_absolute_y(&mut self){
+        println!("ldy_indirect_x");
+        
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
+        self.registors.pc += 2;
+        
+        let base_address = self.read_u16(zero_page_operand as u16);
+        
+        let effective_address = base_address.wrapping_add(self.registors.x as u16);
+
+        println!("{}",effective_address);
+        if (base_address & 0xFF00) != (effective_address & 0xFF00) {
+            self.cycle_count += 5; // 6 if page boundry is crossed
+        } else{
+            self.cycle_count += 4;  //page boundry is not crossed
+        }
+        
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        self.registors.y = value as i8;
+        self.registors.sr.z = value == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+    }
+    
+    //Signle Commands
+    fn nop(&mut self){
+        println!("nop");
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //nop takes no operands
+    }
+    
+    fn clc(&mut self){
+        println!("clc");
+        self.registors.sr.c = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //clc takes no operands
+    }
+    
+    fn cld(&mut self){
+        println!("cld");
+        self.registors.sr.c = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //cld takes no operands
+    }
+    
+    fn cli(&mut self){
+        println!("cli");
+        self.registors.sr.i = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //cli takes no operands
+    }
+    
+    fn clv(&mut self){
+        println!("clv");
+        self.registors.sr.v = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //clv takes no operands
     }
 }
 
