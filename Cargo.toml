@@ -10,3 +10,8 @@ license = "MIT"
 repository = "https://github.com/Shane-Wood-TL/Rusty-6502/"
 
 [dependencies]
+
+
+[[bin]]
+name = "rusty_6502"
+path = "6502.rs"
