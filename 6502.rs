@@ -355,25 +355,212 @@ impl Cpu6502{
         self.registors.pc += 1; //move to next byte
         
         match opcode{
-            x if x == Opcodes::LdaImmediate as u8 => self.lda_immediate(),
-            x if x == Opcodes::LdaZeropage as u8 => self.lda_zero_page(),
-            x if x == Opcodes::LdaZeropageX as u8 => self.lda_zero_page_x(),
-            x if x == Opcodes::LdaAbsolute as u8 => self.lda_absolute(),
-            x if x == Opcodes::LdaAbsoluteX as u8 => self.lda_absolute_x(),
-            x if x == Opcodes::LdaAbsoluteY as u8 => self.lda_absolute_y(),
-            x if x == Opcodes::LdaIndirectX  as u8 => self.lda_indirect_x(),
-            x if x == Opcodes::LdaIndirectY  as u8 => self.lda_indirect_y(),
-            x if x == Opcodes::LdxImmediate  as u8 => self.ldx_immediate(),
-            x if x == Opcodes::LdxZeropage  as u8 => self.ldx_zero_page(),
-            x if x == Opcodes::LdxZeropageY  as u8 => self.ldx_zero_page_y(),
-            x if x == Opcodes::LdxAbsolute  as u8 => self.ldx_absolute(),
-            x if x == Opcodes::LdxAbsoluteY  as u8 => self.ldx_absolute_y(),
-            x if x == Opcodes::Nop  as u8 => self.nop(),
-            x if x == Opcodes::Clc  as u8 => self.clc(),
-            x if x == Opcodes::Cld  as u8 => self.cld(),
-            x if x == Opcodes::Cli  as u8 => self.cli(),
-            x if x == Opcodes::Clv  as u8 => self.clv(),
-            x if x == Opcodes::BRK as u8 => {println!("BRK"); return -1;}
+            x if x == Opcodes::LdaImmediate   as u8 => self.lda_immediate(),
+            x if x == Opcodes::LdaZeropage    as u8 => self.lda_zero_page(),
+            x if x == Opcodes::LdaZeropageX   as u8 => self.lda_zero_page_x(),
+            x if x == Opcodes::LdaAbsolute    as u8 => self.lda_absolute(),
+            x if x == Opcodes::LdaAbsoluteX   as u8 => self.lda_absolute_x(),
+            x if x == Opcodes::LdaAbsoluteY   as u8 => self.lda_absolute_y(),
+            x if x == Opcodes::LdaIndirectX   as u8 => self.lda_indirect_x(),
+            x if x == Opcodes::LdaIndirectY   as u8 => self.lda_indirect_y(),
+
+            
+            x if x == Opcodes::AdcImmediate   as u8 => self.adc_immediate(),
+            x if x == Opcodes::AdcZeropage    as u8 => self.adc_zero_page(),
+            x if x == Opcodes::AdcZeropageX   as u8 => self.adc_zero_page_x(),
+            x if x == Opcodes::AdcAbsolute    as u8 => self.adc_absolute(),
+            x if x == Opcodes::AdcAbsoluteX   as u8 => self.adc_absolute_x(),
+            x if x == Opcodes::AdcAbsoluteY   as u8 => self.adc_absolute_y(),
+            x if x == Opcodes::AdcIndirectX   as u8 => self.adc_indirect_x(),
+            x if x == Opcodes::AdcIndirectY   as u8 => self.adc_indirect_y(),
+            
+            x if x == Opcodes::AndImmediate   as u8 => self.and_immediate(),
+            x if x == Opcodes::AndZeropage    as u8 => self.and_zero_page(),
+            x if x == Opcodes::AndZeropageX   as u8 => self.and_zero_page_x(),
+            x if x == Opcodes::AndAbsolute    as u8 => self.and_absolute(),
+            x if x == Opcodes::AndAbsoluteX   as u8 => self.and_absolute_x(),
+            x if x == Opcodes::AndAbsoluteY   as u8 => self.and_absolute_y(),
+            x if x == Opcodes::AndIndirectX   as u8 => self.and_indirect_x(),
+            x if x == Opcodes::AndIndirectY   as u8 => self.and_indirect_y(),
+            
+            x if x == Opcodes::AslAccumulator as u8 => self.asl_accumulator_x(),
+            x if x == Opcodes::AslZeropage    as u8 => self.asl_zero_page(),
+            x if x == Opcodes::AslZeropageX   as u8 => self.asl_zero_page_x(),
+            x if x == Opcodes::AslAbsolute    as u8 => self.asl_absolute(),           
+            x if x == Opcodes::AslAbsoluteX   as u8 => self.asl_absolute_x(),   
+            
+            x if x == Opcodes::BccRelative    as u8 => self.bcc_relative(),
+            
+            x if x == Opcodes::BeqRelative    as u8 => self.beq_relative(),
+            
+            x if x == Opcodes::BitZeropage    as u8 => self.bit_zero_page(),
+            x if x == Opcodes::BitAbsolute    as u8 => self.bit_absolute(),
+            
+            x if x == Opcodes::BmiRelative    as u8 => self.bmi_relative(),
+            
+            x if x == Opcodes::BneRelative    as u8 => self.bne_relative(),
+            
+            x if x == Opcodes::BplRelative    as u8 => self.bpl_relative(),
+            
+            x if x == Opcodes::BRK            as u8 => {println!("BRK"); return -1;}
+            
+            x if x == Opcodes::BvcRelative    as u8 => self.bvc_relative(),
+            
+            x if x == Opcodes::BvsRelative    as u8 => self.bvs_relative(),
+            
+            x if x == Opcodes::Clc            as u8 => self.clc(),
+            
+            x if x == Opcodes::Cld            as u8 => self.cld(),
+            
+            x if x == Opcodes::Cli            as u8 => self.cli(),
+            
+            x if x == Opcodes::Clv            as u8 => self.clv(),
+            
+            x if x == Opcodes::CmpImmediate   as u8 => self.cmp_immediate(),
+            x if x == Opcodes::CmpZeropage    as u8 => self.cmp_zero_page(),
+            x if x == Opcodes::CmpZeropageX   as u8 => self.cmp_zero_page_x(),
+            x if x == Opcodes::CmpAbsolute    as u8 => self.cmp_absolute(),
+            x if x == Opcodes::CmpAbsoluteX   as u8 => self.cmp_absolute_x(),
+            x if x == Opcodes::CmpAbsoluteY   as u8 => self.cmp_absolute_y(),
+            x if x == Opcodes::CmpIndirectX   as u8 => self.cmp_indirect_x(),
+            x if x == Opcodes::CmpIndirectY   as u8 => self.cmp_indirect_y(),
+            
+            x if x == Opcodes::CpxImmediate   as u8 => self.cpx_immediate(),
+            x if x == Opcodes::CpxZeropage    as u8 => self.cpx_zero_page(),
+            x if x == Opcodes::CpxAbsolute    as u8 => self.cpx_absolute(),
+            
+            x if x == Opcodes::CpyImmediate   as u8 => self.cpy_immediate(),
+            x if x == Opcodes::CpyZeropage    as u8 => self.cpy_zero_page(),
+            x if x == Opcodes::CpyAbsolute    as u8 => self.cpy_absolute(),
+            
+            x if x == Opcodes::DecZeropage    as u8 => self.dec_zero_page(),
+            x if x == Opcodes::DecZeropageX   as u8 => self.dec_zero_page_x(),
+            x if x == Opcodes::DecAbsolute    as u8 => self.dec_absolute(),
+            x if x == Opcodes::DecAbsoluteX   as u8 => self.dec_absolute_x(),
+            
+            x if x == Opcodes::Dex            as u8 => self.dex(),
+            
+            x if x == Opcodes::Dey            as u8 => self.dey(),
+            
+            x if x == Opcodes::EorImmediate   as u8 => self.eor_immediate(),
+            x if x == Opcodes::EorZeropage    as u8 => self.eor_zero_page(),
+            x if x == Opcodes::EorZeropageX   as u8 => self.eor_zero_page_x(),
+            x if x == Opcodes::EorAbsolute    as u8 => self.eor_absolute(),
+            x if x == Opcodes::EorAbsoluteX   as u8 => self.eor_absolute_x(),
+            x if x == Opcodes::EorAbsoluteY   as u8 => self.eor_absolute_y(),
+            x if x == Opcodes::EorIndirectX   as u8 => self.eor_indirect_x(),
+            x if x == Opcodes::EorIndirectY   as u8 => self.eor_indirect_y(),
+            
+            x if x == Opcodes::IncZeropage    as u8 => self.inc_zero_page(),
+            x if x == Opcodes::IncZeropageX   as u8 => self.inc_zero_page_x(),
+            x if x == Opcodes::IncAbsolute    as u8 => self.inc_absolute(),
+            x if x == Opcodes::IncAbsoluteX   as u8 => self.inc_absolute_x(),
+            
+            x if x == Opcodes::Inx            as u8 => self.inx(),
+            
+            x if x == Opcodes::Iny            as u8 => self.iny(),
+            
+            x if x == Opcodes::JmpAbsolute    as u8 => self.jmp_absolute(),
+            x if x == Opcodes::JmpIndirect    as u8 => self.jmp_indirect(),
+            
+            x if x == Opcodes::JsrAbsolute    as u8 => self.jsr_absolute(),
+            
+            x if x == Opcodes::LdxImmediate   as u8 => self.ldx_immediate(),
+            x if x == Opcodes::LdxZeropage    as u8 => self.ldx_zero_page(),
+            x if x == Opcodes::LdxZeropageY   as u8 => self.ldx_zero_page_y(),
+            x if x == Opcodes::LdxAbsolute    as u8 => self.ldx_absolute(),
+            x if x == Opcodes::LdxAbsoluteY   as u8 => self.ldx_absolute_y(),
+            
+            x if x == Opcodes::LdyImmediate   as u8 => self.ldy_immediate(),
+            x if x == Opcodes::LdyZeropage    as u8 => self.ldy_zero_page(),
+            x if x == Opcodes::LdyZeropageY   as u8 => self.ldy_zero_page_y(),
+            x if x == Opcodes::LdyAbsolute    as u8 => self.ldy_absolute(),
+            x if x == Opcodes::LdyAbsoluteY   as u8 => self.ldy_absolute_y(),
+            
+            x if x == Opcodes::LsrAccumulator as u8 => self.lsr_accumulator(),
+            x if x == Opcodes::LsrZeropage    as u8 => self.lsr_zero_page(),
+            x if x == Opcodes::LsrZeropageX   as u8 => self.lsr_zero_page_x(),
+            x if x == Opcodes::LsrAbsolute    as u8 => self.lsr_absolute(),
+            x if x == Opcodes::LsrAbsoluteX   as u8 => self.lsr_absolute_x(),
+            
+            x if x == Opcodes::Nop            as u8 => self.nop(),
+            
+            x if x == Opcodes::OraImmediate   as u8 => self.ora_immediate(),
+            x if x == Opcodes::OraZeropage    as u8 => self.ora_zero_page(),
+            x if x == Opcodes::OraZeropageX   as u8 => self.ora_zero_page_x(),
+            x if x == Opcodes::OraAbsolute    as u8 => self.ora_absolute(),
+            x if x == Opcodes::OraAbsoluteX   as u8 => self.ora_absolute_x(),
+            x if x == Opcodes::OraAbsoluteY   as u8 => self.ora_absolute_y(),
+            x if x == Opcodes::OraIndirectX   as u8 => self.ora_indirect_x(),
+            x if x == Opcodes::OraIndirectY   as u8 => self.ora_indirect_y(),
+            
+            x if x == Opcodes::Pha            as u8 => self.pha(),
+            
+            x if x == Opcodes::Php            as u8 => self.php(),
+            
+            x if x == Opcodes::Pla            as u8 => self.pla(),
+            
+            x if x == Opcodes::Plp            as u8 => self.plp(),
+            
+            x if x == Opcodes::RolAccumulator as u8 => self.rol_accumulator(),
+            x if x == Opcodes::RolZeropage    as u8 => self.rol_zero_page(),
+            x if x == Opcodes::RolZeropageX   as u8 => self.rol_zero_page_x(),
+            x if x == Opcodes::RolAbsolute    as u8 => self.rol_absolute(),
+            x if x == Opcodes::RolAbsoluteX   as u8 => self.rol_absolute_x(),
+            
+            x if x == Opcodes::RorAccumulator as u8 => self.ror_accumulator(),
+            x if x == Opcodes::RorZeropage    as u8 => self.ror_zero_page(),
+            x if x == Opcodes::RorZeropageX   as u8 => self.ror_zero_page_x(),
+            x if x == Opcodes::RorAbsolute    as u8 => self.ror_absolute(),
+            x if x == Opcodes::RorAbsoluteX   as u8 => self.ror_absolute_x(),
+            
+            x if x == Opcodes::Rti            as u8 => self.rti(),
+            
+            x if x == Opcodes::Rts            as u8 => self.rts(),
+            
+            x if x == Opcodes::SbcImmediate   as u8 => self.sbc_immediate(),
+            x if x == Opcodes::SbcZeropage    as u8 => self.sbc_zero_page(),
+            x if x == Opcodes::SbcZeropageX   as u8 => self.sbc_zero_page_x(),
+            x if x == Opcodes::SbcAbsolute    as u8 => self.sbc_absolute(),
+            x if x == Opcodes::SbcAbsoluteX   as u8 => self.sbc_absolute_x(),
+            x if x == Opcodes::SbcAbsoluteY   as u8 => self.sbc_absolute_y(),
+            x if x == Opcodes::SbcIndirectX   as u8 => self.sbc_indirect_x(),
+            x if x == Opcodes::SbcIndirectY   as u8 => self.sbc_indirect_y(),
+            
+            x if x == Opcodes::Sec            as u8 => self.sec(),
+            
+            x if x == Opcodes::Sed            as u8 => self.sed(),
+            
+            x if x == Opcodes::Sei            as u8 => self.sei(),
+            
+            x if x == Opcodes::StaZeropage    as u8 => self.sta_zero_page(),
+            x if x == Opcodes::StaZeropageX   as u8 => self.sta_zero_page_x(),
+            x if x == Opcodes::StaAbsolute    as u8 => self.sta_absolute(),
+            x if x == Opcodes::StaAbsoluteX   as u8 => self.sta_absolute_x(),
+            x if x == Opcodes::StaAbsoluteY   as u8 => self.sta_absolute_y(),
+            x if x == Opcodes::StaIndirectX   as u8 => self.sta_indirect_x(),
+            x if x == Opcodes::StaIndirectY   as u8 => self.sta_indirect_y(),
+            
+            x if x == Opcodes::StxZeropage    as u8 => self.stx_zero_page(),
+            x if x == Opcodes::StxZeropageY   as u8 => self.stx_zero_page_y(),
+            x if x == Opcodes::StxAbsolute    as u8 => self.stx_absolute(),
+            
+            x if x == Opcodes::StyZeropage    as u8 => self.sty_zero_page(),
+            x if x == Opcodes::StyZeropageY   as u8 => self.sty_zero_page_y(),
+            x if x == Opcodes::StyAbsolute    as u8 => self.sty_absolute(),
+            
+            x if x == Opcodes::Tax            as u8 => self.tax(),
+            
+            x if x == Opcodes::Tay            as u8 => self.tay(),
+            
+            x if x == Opcodes::Tsx            as u8 => self.tsx(),
+            
+            x if x == Opcodes::Txa            as u8 => self.txa(),
+            
+            x if x == Opcodes::Txs            as u8 => self.txs(),
+            
+            x if x == Opcodes::Tya            as u8 => self.tya(),
+            
         _ =>{
             println!("opcode: {:02X}", opcode);
             return -1;
