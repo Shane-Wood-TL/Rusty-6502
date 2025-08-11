@@ -473,9 +473,9 @@ impl Cpu6502{
             
             x if x == Opcodes::LdyImmediate   as u8 => self.ldy_immediate(),
             x if x == Opcodes::LdyZeropage    as u8 => self.ldy_zero_page(),
-            x if x == Opcodes::LdyZeropageY   as u8 => self.ldy_zero_page_y(),
+            x if x == Opcodes::LdyZeropageX   as u8 => self.ldy_zero_page_x(),
             x if x == Opcodes::LdyAbsolute    as u8 => self.ldy_absolute(),
-            x if x == Opcodes::LdyAbsoluteY   as u8 => self.ldy_absolute_y(),
+            x if x == Opcodes::LdyAbsoluteX   as u8 => self.ldy_absolute_x(),
             
             x if x == Opcodes::LsrAccumulator as u8 => self.lsr_accumulator(),
             x if x == Opcodes::LsrZeropage    as u8 => self.lsr_zero_page(),
@@ -546,7 +546,7 @@ impl Cpu6502{
             x if x == Opcodes::StxAbsolute    as u8 => self.stx_absolute(),
             
             x if x == Opcodes::StyZeropage    as u8 => self.sty_zero_page(),
-            x if x == Opcodes::StyZeropageY   as u8 => self.sty_zero_page_y(),
+            x if x == Opcodes::StyZeropageX   as u8 => self.sty_zero_page_x(),
             x if x == Opcodes::StyAbsolute    as u8 => self.sty_absolute(),
             
             x if x == Opcodes::Tax            as u8 => self.tax(),
@@ -713,6 +713,275 @@ impl Cpu6502{
         self.registors.sr.n = (value & 0x80) != 0;
     }
     
+    
+    
+    fn adc_immediate(&mut self){
+        
+    }
+    fn adc_zero_page(&mut self){
+        
+    }
+    fn adc_zero_page_x(&mut self){
+        
+    }
+    fn adc_absolute(&mut self){
+        
+    }
+    fn adc_absolute_x(&mut self){
+        
+    }
+    fn adc_absolute_y(&mut self){
+        
+    }
+    fn adc_indirect_x(&mut self){
+        
+    }
+    fn adc_indirect_y(&mut self){
+        
+    }
+
+
+    fn and_immediate(&mut self){
+        
+    }
+    fn and_zero_page(&mut self){
+        
+    }
+    fn and_zero_page_x(&mut self){
+        
+    }
+    fn and_absolute(&mut self){
+        
+    }
+    fn and_absolute_x(&mut self){
+        
+    }
+    fn and_absolute_y(&mut self){
+        
+    }
+    fn and_indirect_x(&mut self){
+        
+    }
+    fn and_indirect_y(&mut self){
+        
+    }
+
+
+    fn asl_accumulator_x(&mut self){
+        
+    }
+    fn asl_zero_page(&mut self){
+        
+    }
+    fn asl_zero_page_x(&mut self){
+        
+    }
+    fn asl_absolute(&mut self){
+        
+    }
+    fn asl_absolute_x(&mut self){
+        
+    }
+    
+    
+    fn bcc_relative(&mut self){
+        
+    }
+    
+    fn beq_relative(&mut self){
+        
+    }
+    
+    
+    fn bit_zero_page(&mut self){
+        
+    }
+    fn bit_absolute(&mut self){
+        
+    }
+    
+    
+    fn bmi_relative(&mut self){
+        
+    }
+    
+    fn bne_relative(&mut self){
+        
+    }
+    
+    fn bpl_relative(&mut self){
+        
+    }
+    
+    fn bvc_relative(&mut self){
+        
+    }
+    
+    fn bvs_relative(&mut self){
+        
+    }
+    
+    fn clc(&mut self){
+        println!("clc");
+        self.registors.sr.c = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //clc takes no operands
+    }
+    
+    fn cld(&mut self){
+        println!("cld");
+        self.registors.sr.c = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //cld takes no operands
+    }
+    
+    fn cli(&mut self){
+        println!("cli");
+        self.registors.sr.i = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //cli takes no operands
+    }
+    
+    fn clv(&mut self){
+        println!("clv");
+        self.registors.sr.v = false;
+        self.cycle_count += 2;
+        //self.registors.pc += 0; //clv takes no operands
+    }
+    
+    
+    fn cmp_immediate(&mut self){
+        
+    }
+    fn cmp_zero_page(&mut self){
+        
+    }
+    fn cmp_zero_page_x(&mut self){
+        
+    }
+    fn cmp_absolute(&mut self){
+        
+    }
+    fn cmp_absolute_x(&mut self){
+        
+    }
+    fn cmp_absolute_y(&mut self){
+        
+    }
+    fn cmp_indirect_x(&mut self){
+        
+    }
+    fn cmp_indirect_y(&mut self){
+        
+    }
+
+
+    fn cpx_immediate(&mut self){
+        
+    }
+    fn cpx_zero_page(&mut self){
+        
+    }
+    fn cpx_absolute(&mut self){
+        
+    }
+    
+    
+    fn cpy_immediate(&mut self){
+        
+    }
+    fn cpy_zero_page(&mut self){
+        
+    }
+    fn cpy_absolute(&mut self){
+        
+    }
+    
+    
+    fn dec_zero_page(&mut self){
+        
+    }
+    fn dec_zero_page_x(&mut self){
+        
+    }
+    fn dec_absolute(&mut self){
+        
+    }
+    fn dec_absolute_x(&mut self){
+        
+    }
+    
+    
+    fn dex(&mut self){
+        
+    }
+    
+    fn dey(&mut self){
+        
+    }
+    
+    
+    fn eor_immediate(&mut self){
+        
+    }
+    fn eor_zero_page(&mut self){
+        
+    }
+    fn eor_zero_page_x(&mut self){
+        
+    }
+    fn eor_absolute(&mut self){
+        
+    }
+    fn eor_absolute_x(&mut self){
+        
+    }
+    fn eor_absolute_y(&mut self){
+        
+    }
+    fn eor_indirect_x(&mut self){
+        
+    }
+    fn eor_indirect_y(&mut self){
+        
+    }
+    
+    
+    fn inc_zero_page(&mut self){
+        
+    }
+    fn inc_zero_page_x(&mut self){
+        
+    }
+    fn inc_absolute(&mut self){
+        
+    }
+    fn inc_absolute_x(&mut self){
+        
+    }
+    
+    
+    fn inx(&mut self){
+        
+    }
+    
+    fn iny(&mut self){
+        
+    }
+    
+    
+    fn jmp_absolute(&mut self){
+        
+    }
+    fn jmp_indirect(&mut self){
+        
+    }
+    
+    fn jsr_absolute(&mut self){
+        
+    }
+    
+    
     //LDX Commands
     fn ldx_immediate(&mut self){
         let value = self.memory.read_byte(self.registors.pc as u32);
@@ -849,7 +1118,7 @@ impl Cpu6502{
         self.registors.sr.z = value == 0;
         self.registors.sr.n = (value & 0x80) != 0;
     }
-    fn ldy_absolute_y(&mut self){
+    fn ldy_absolute_x(&mut self){
         println!("ldy_indirect_x");
         
         let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
@@ -873,39 +1142,217 @@ impl Cpu6502{
         self.registors.sr.n = (value & 0x80) != 0;
     }
     
-    //Signle Commands
+    fn lsr_accumulator(&mut self){
+        
+    }
+    fn lsr_zero_page(&mut self){
+        
+    }
+    fn lsr_zero_page_x(&mut self){
+        
+    }
+    fn lsr_absolute(&mut self){
+        
+    }
+    fn lsr_absolute_x(&mut self){
+        
+    }
+    
     fn nop(&mut self){
         println!("nop");
         self.cycle_count += 2;
         //self.registors.pc += 0; //nop takes no operands
     }
     
-    fn clc(&mut self){
-        println!("clc");
-        self.registors.sr.c = false;
-        self.cycle_count += 2;
-        //self.registors.pc += 0; //clc takes no operands
+    
+    fn ora_immediate(&mut self){
+        
+    }
+    fn ora_zero_page(&mut self){
+        
+    }
+    fn ora_zero_page_x(&mut self){
+        
+    }
+    fn ora_absolute(&mut self){
+        
+    }
+    fn ora_absolute_x(&mut self){
+        
+    }
+    fn ora_absolute_y(&mut self){
+        
+    }
+    fn ora_indirect_x(&mut self){
+        
+    }
+    fn ora_indirect_y(&mut self){
+        
     }
     
-    fn cld(&mut self){
-        println!("cld");
-        self.registors.sr.c = false;
-        self.cycle_count += 2;
-        //self.registors.pc += 0; //cld takes no operands
+    fn pha(&mut self){
+        
     }
     
-    fn cli(&mut self){
-        println!("cli");
-        self.registors.sr.i = false;
-        self.cycle_count += 2;
-        //self.registors.pc += 0; //cli takes no operands
+    fn php(&mut self){
+        
     }
     
-    fn clv(&mut self){
-        println!("clv");
-        self.registors.sr.v = false;
-        self.cycle_count += 2;
-        //self.registors.pc += 0; //clv takes no operands
+    fn pla(&mut self){
+        
+    }
+    
+    fn plp(&mut self){
+        
+    }
+    
+    
+    
+    fn rol_accumulator(&mut self){
+        
+    }
+    fn rol_zero_page(&mut self){
+        
+    }
+    fn rol_zero_page_x(&mut self){
+        
+    }
+    fn rol_absolute(&mut self){
+        
+    }
+    fn rol_absolute_x(&mut self){
+        
+    }
+    
+    fn ror_accumulator(&mut self){
+        
+    }
+    fn ror_zero_page(&mut self){
+        
+    }
+    fn ror_zero_page_x(&mut self){
+        
+    }
+    fn ror_absolute(&mut self){
+        
+    }
+    fn ror_absolute_x(&mut self){
+        
+    }
+    
+    fn rti(&mut self){
+        
+    }
+    
+    fn rts(&mut self){
+        
+    }
+    
+    
+    fn sbc_immediate(&mut self){
+        
+    }
+    fn sbc_zero_page(&mut self){
+        
+    }
+    fn sbc_zero_page_x(&mut self){
+        
+    }
+    fn sbc_absolute(&mut self){
+        
+    }
+    fn sbc_absolute_x(&mut self){
+        
+    }
+    fn sbc_absolute_y(&mut self){
+        
+    }
+    fn sbc_indirect_x(&mut self){
+        
+    }
+    fn sbc_indirect_y(&mut self){
+        
+    }
+    
+    fn sec(&mut self){
+        
+    }
+    
+    fn sed(&mut self){
+        
+    }
+    
+    fn sei(&mut self){
+        
+    }
+    
+    
+    fn sta_zero_page(&mut self){
+        
+    }
+    fn sta_zero_page_x(&mut self){
+        
+    }
+    fn sta_absolute(&mut self){
+        
+    }
+    fn sta_absolute_x(&mut self){
+        
+    }
+    fn sta_absolute_y(&mut self){
+        
+    }
+    fn sta_indirect_x(&mut self){
+        
+    }
+    fn sta_indirect_y(&mut self){
+        
+    }
+    
+    
+    fn stx_zero_page(&mut self){
+        
+    }
+    fn stx_zero_page_y(&mut self){
+        
+    }
+    fn stx_absolute(&mut self){
+        
+    }
+    
+    
+    fn sty_zero_page(&mut self){
+        
+    }
+    fn sty_zero_page_x(&mut self){
+        
+    }
+    fn sty_absolute(&mut self){
+        
+    }
+    
+    fn tax(&mut self){
+        
+    }
+    
+    fn tay(&mut self){
+        
+    }
+    
+    fn tsx(&mut self){
+        
+    }
+    
+    fn txa(&mut self){
+        
+    }
+    
+    fn txs(&mut self){
+        
+    }
+    
+    fn tya(&mut self){
+        
     }
 }
 
