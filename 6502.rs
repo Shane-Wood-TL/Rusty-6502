@@ -325,12 +325,18 @@ impl Cpu6502{
         }
     }
     
-    fn read_u16(&mut self, addr: u16) -> u16 {
-        let lo = self.memory.read_byte(addr as u32) as u16;
-        let hi = self.memory.read_byte((addr + 1) as u32) as u16;
+    fn read_u16(&mut self, address: u16) -> u16 {
+        let lo = self.memory.read_byte(address as u32) as u16;
+        let hi = self.memory.read_byte((address + 1) as u32) as u16;
         (hi << 8) | lo
     }
     
+    fn read_u16_zero_page(&mut self, address: u8) -> u16 {
+        let lo = self.memory.read_byte(address as u32) as u16;
+        let hi = self.memory.read_byte(((address + 1)& 0xFF) as u32) as u16;
+        (hi << 8) | lo
+    }
+
     pub fn reset(&mut self) {
         let reset_vector = self.read_u16(0xFFFC);
         self.init_registers(reset_vector);
@@ -682,7 +688,7 @@ impl Cpu6502{
         
         let pointer_address = zero_page_operand.wrapping_add(self.registors.x as u8);
 
-        let effective_address = self.read_u16(pointer_address as u16);
+        let effective_address = self.read_u16_zero_page(pointer_address as u8);
         
         let value = self.memory.read_byte(effective_address as u32);
         
@@ -696,7 +702,7 @@ impl Cpu6502{
         let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
         
-        let base_address = self.read_u16(zero_page_operand as u16);
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
         
         let y = self.registors.y;
 
@@ -716,55 +722,336 @@ impl Cpu6502{
     
     
     
-    fn adc_immediate(&mut self){
+    fn adc_immediate(&mut self) {
+        let value = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 2;
     }
     fn adc_zero_page(&mut self){
+        let address = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+
+        let value = self.memory.read_byte(address as u32); //takes an extra cycle since it also has to load this from memory
+        
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 3;
     }
     fn adc_zero_page_x(&mut self){
+        let base_address = self.memory.read_byte(self.registors.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registors.pc += 1;
+
+        let address = base_address.wrapping_add(self.registors.x as u8) & 0xFF;
+
+
+        let value = self.memory.read_byte(address as u32); //takes an extra cycle since it also has to load this from memory
+        
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 4;
     }
     fn adc_absolute(&mut self){
+        let address = self.read_u16(self.registors.pc);
         self.registors.pc += 2;
+
+        let value = self.memory.read_byte(address as u32);
+
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 4;
     }
     fn adc_absolute_x(&mut self){
+        let address = self.read_u16(self.registors.pc);
+        
         self.registors.pc += 2;
+        
+        let x = self.registors.x;
+
+        if self.page_boundary_cross(address, x as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
+        }
+        
+        let effective_address = address.wrapping_add(x as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn adc_absolute_y(&mut self){
-        self.registors.pc += 2;
+        let address = self.read_u16(self.registors.pc);
+        
+        self.registors.pc += 2; 
+        
+        let y = self.registors.y;
+        
+        if self.page_boundary_cross(address, y as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
+        }
+        
+        let effective_address = address.wrapping_add(y as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
-    fn adc_indirect_x(&mut self){
+    fn adc_indirect_x(&mut self){      
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+        
+        self.cycle_count += 6;
+
+        let pointer_address = zero_page_operand.wrapping_add(self.registors.x as u8);
+
+        let effective_address = self.read_u16_zero_page(pointer_address as u8);
+        
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn adc_indirect_y(&mut self){
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+        
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
+        
+        let y = self.registors.y;
+
+        if self.page_boundary_cross(base_address, y as u8) {
+            self.cycle_count += 6; // Page boundary crossed
+        } else {
+            self.cycle_count += 5; // No crossing
+        }
+        
+        let effective_address = base_address.wrapping_add(y as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let acc = self.registors.ac as u8;
+        let carry_in = if self.registors.sr.c { 1 } else { 0 };
+
+        let result = acc as u16 + value as u16 + carry_in as u16;
+        let result_byte = result as u8;
+
+        self.registors.sr.c = result > 0xFF;
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.sr.v = ((acc ^ result_byte) & (value ^ result_byte) & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
 
 
     fn and_immediate(&mut self){
+        let value = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+   
+        let result_byte = value & self.registors.ac as u8;
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 2;
     }
     fn and_zero_page(&mut self){
-        self.registors.pc += 1;
+        let address = self.memory.read_byte(self.registors.pc as u32);
+        self.cycle_count += 3;
+        self.registors.pc += 1; 
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        let result_byte = value & self.registors.ac as u8;
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn and_zero_page_x(&mut self){
+        let base_address = self.memory.read_byte(self.registors.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registors.pc += 1;
+
+        let address = base_address.wrapping_add(self.registors.x as u8) & 0xFF;
+
+        let value = self.memory.read_byte(address as u32); //takes an extra cycle since it also has to load this from memory
+        
+        let result_byte = value & self.registors.ac as u8;
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 4;
     }
     fn and_absolute(&mut self){
+        let address = self.read_u16(self.registors.pc);
         self.registors.pc += 2;
+
+        let value = self.memory.read_byte(address as u32);
+
+        let result_byte = value & (self.registors.ac as u8);
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
+
+        self.cycle_count += 4;
     }
     fn and_absolute_x(&mut self){
+        let address = self.read_u16(self.registors.pc);
+        
         self.registors.pc += 2;
+        
+        let x = self.registors.x;
+
+        if self.page_boundary_cross(address, x as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
+        }
+        
+        let effective_address = address.wrapping_add(x as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+
+        let result_byte = value & (self.registors.ac as u8);
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn and_absolute_y(&mut self){
-        self.registors.pc += 2;
+        let address = self.read_u16(self.registors.pc);
+        
+        self.registors.pc += 2; 
+        
+        let y = self.registors.y;
+        
+        if self.page_boundary_cross(address, y as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
+        }
+        
+        let effective_address = address.wrapping_add(y as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let result_byte = value & (self.registors.ac as u8);
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn and_indirect_x(&mut self){
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+        
+        self.cycle_count += 6;
+
+        let pointer_address = zero_page_operand.wrapping_add(self.registors.x as u8);
+
+        let effective_address = self.read_u16_zero_page(pointer_address as u8);
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let result_byte = value & (self.registors.ac as u8);
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
     fn and_indirect_y(&mut self){
+        let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 1;
+        
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
+        
+        let y = self.registors.y;
+
+        if self.page_boundary_cross(base_address, y as u8) {
+            self.cycle_count += 6; // Page boundary crossed
+        } else {
+            self.cycle_count += 5; // No crossing
+        }
+        
+        let effective_address = base_address.wrapping_add(y as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+        
+        let result_byte = value & (self.registors.ac as u8);
+
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.registors.ac = result_byte as i8;
     }
 
 
@@ -792,7 +1079,6 @@ impl Cpu6502{
     fn bcs_relative(&mut self){
         self.registors.pc += 1;
     }
-    
     fn beq_relative(&mut self){
         self.registors.pc += 1;
     }
@@ -1049,7 +1335,7 @@ impl Cpu6502{
         let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 2;
         
-        let base_address = self.read_u16(zero_page_operand as u16);
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
         
         let effective_address = base_address.wrapping_add(self.registors.y as u16);
 
@@ -1128,7 +1414,7 @@ impl Cpu6502{
         let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 2;
         
-        let base_address = self.read_u16(zero_page_operand as u16);
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
         
         let effective_address = base_address.wrapping_add(self.registors.x as u16);
 
@@ -1637,12 +1923,12 @@ mod tests {
         cpu.registors.y = 0x00;
     
         // Zero page pointer at 0x20 → points to 0x12FF
-        let base_pointer_addr: u16 = 0x12FF;
+        let base_pointer_address: u16 = 0x12FF;
         let data_value: u8 = 0x42;
     
-        cpu.memory.write_byte(0x0020, (base_pointer_addr & 0xFF) as u8); // Low byte
-        cpu.memory.write_byte(0x0021, (base_pointer_addr >> 8) as u8);   // High byte
-        cpu.memory.write_byte(base_pointer_addr as u32, data_value);     // Store value
+        cpu.memory.write_byte(0x0020, (base_pointer_address & 0xFF) as u8); // Low byte
+        cpu.memory.write_byte(0x0021, (base_pointer_address >> 8) as u8);   // High byte
+        cpu.memory.write_byte(base_pointer_address as u32, data_value);     // Store value
     
         // Program
         cpu.memory.write_byte(0x8000, Opcodes::LdaIndirectY as u8);
