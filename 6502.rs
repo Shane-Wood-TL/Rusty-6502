@@ -262,7 +262,7 @@ impl Memory{
 
 
 
-pub struct StatusRegisterValues {
+pub struct StatusregistorValues {
     n: bool, //negative
     v: bool, //Overflow
     not_used: bool, //ignored
@@ -273,9 +273,9 @@ pub struct StatusRegisterValues {
     c: bool, //carry
 }
 
-impl StatusRegisterValues {
+impl StatusregistorValues {
     pub fn new() -> Self {
-        StatusRegisterValues {
+        StatusregistorValues {
             n: false,
             v: false,
             not_used: false,
@@ -291,9 +291,9 @@ impl StatusRegisterValues {
 pub struct Registors6502 {
     pc: u16, //program counter
     ac: i8, //accumulator
-    x: i8, //x register
-    y: i8, // y register 
-    sr: StatusRegisterValues, //status register
+    x: i8, //x registor
+    y: i8, // y registor 
+    sr: StatusregistorValues, //status registor
     sp: u16 //stack pointer
 }
 
@@ -304,7 +304,7 @@ impl Registors6502 {
             ac: 0,
             x: 0,
             y: 0,
-            sr: StatusRegisterValues::new(),
+            sr: StatusregistorValues::new(),
             sp: 0,
         }
     }
@@ -339,14 +339,14 @@ impl Cpu6502{
 
     pub fn reset(&mut self) {
         let reset_vector = self.read_u16(0xFFFC);
-        self.init_registers(reset_vector);
+        self.init_registors(reset_vector);
     }
     
-    pub fn init_registers(&mut self, reset_vector: u16){
+    pub fn init_registors(&mut self, reset_vector: u16){
         self.registors.pc = reset_vector;
         self.registors.sp = 0x0100;
         
-        self.registors.sr = StatusRegisterValues::new();
+        self.registors.sr = StatusregistorValues::new();
         
         
         self.cycle_count = 0;
@@ -387,7 +387,7 @@ impl Cpu6502{
             x if x == Opcodes::AndIndirectX   as u8 => self.and_indirect_x(),
             x if x == Opcodes::AndIndirectY   as u8 => self.and_indirect_y(),
             
-            x if x == Opcodes::AslAccumulator as u8 => self.asl_accumulator_x(),
+            x if x == Opcodes::AslAccumulator as u8 => self.asl_accumulator(),
             x if x == Opcodes::AslZeropage    as u8 => self.asl_zero_page(),
             x if x == Opcodes::AslZeropageX   as u8 => self.asl_zero_page_x(),
             x if x == Opcodes::AslAbsolute    as u8 => self.asl_absolute(),           
@@ -1055,61 +1055,279 @@ impl Cpu6502{
     }
 
 
-    fn asl_accumulator_x(&mut self){
-        self.registors.pc += 0;
+    fn asl_accumulator(&mut self){
+        //self.registors.pc += 0; only one byte, already taken care of
+        let acc = self.registors.ac as u8;
+        
+        self.registors.sr.c = (acc & 0x80) != 0;
+        let result = acc << 1;
+        
+        self.registors.sr.z = result == 0;
+        self.registors.sr.n = (result & 0x80) != 0;
+        self.registors.ac = result as i8;
+
+        self.cycle_count += 2;
     }
     fn asl_zero_page(&mut self){
-        self.registors.pc += 1;
+        let address = self.memory.read_byte(self.registors.pc as u32);
+        self.registors.pc += 1; 
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        self.registors.sr.c = (value & 0x80) != 0;
+        let result_byte = value << 1;
+        
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.memory.write_byte(address as u32, result_byte);
+
+        self.cycle_count += 5;
     }
     fn asl_zero_page_x(&mut self){
+        let base_address = self.memory.read_byte(self.registors.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registors.pc += 1;
+
+        let address = base_address.wrapping_add(self.registors.x as u8) & 0xFF;
+
+        let value = self.memory.read_byte(address as u32); //takes an extra cycle since it also has to load this from memory
+        
+        self.registors.sr.c = (value & 0x80) != 0;
+        let result_byte = value << 1;
+        
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.memory.write_byte(address as u32, result_byte);
+
+        self.cycle_count += 6;
     }
     fn asl_absolute(&mut self){
+        let address = self.read_u16(self.registors.pc);
         self.registors.pc += 2;
+
+        let value = self.memory.read_byte(address as u32);
+
+        self.registors.sr.c = (value & 0x80) != 0;
+        let result_byte = value << 1;
+        
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.memory.write_byte(address as u32, result_byte);
+
+        self.cycle_count += 6;
     }
     fn asl_absolute_x(&mut self){
+        let address = self.read_u16(self.registors.pc);
+        
         self.registors.pc += 2;
+        
+        let x = self.registors.x;
+        
+        let effective_address = address.wrapping_add(x as u16);
+        let value = self.memory.read_byte(effective_address as u32);
+
+        self.registors.sr.c = (value & 0x80) != 0;
+        let result_byte = value << 1;
+        
+        self.registors.sr.z = result_byte == 0;
+        self.registors.sr.n = (result_byte & 0x80) != 0;
+        self.memory.write_byte(effective_address as u32, result_byte);
+
+        self.cycle_count += 7;
     }
     
     
-    fn bcc_relative(&mut self){
+    fn bcc_relative(&mut self){ //branch on c = 0
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if !self.registors.sr.c {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
     
-    fn bcs_relative(&mut self){
+    fn bcs_relative(&mut self){ //branch on c = 1
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if self.registors.sr.c {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
-    fn beq_relative(&mut self){
+
+
+    fn beq_relative(&mut self){ //branch on z = 1
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if self.registors.sr.z {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
     
     
     fn bit_zero_page(&mut self){
-        self.registors.pc += 1;
+        let address = self.memory.read_byte(self.registors.pc as u32);
+        self.registors.pc += 1; 
+        
+        let value = self.memory.read_byte(address as u32);
+        
+        let and_result = (self.registors.ac as u8) & value;
+
+        self.registors.sr.z = and_result == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+        self.registors.sr.v = (value & 0x40) != 0;
+
+        self.cycle_count += 3; 
     }
+
     fn bit_absolute(&mut self){
+        let address = self.read_u16(self.registors.pc);
         self.registors.pc += 2;
+
+        let value = self.memory.read_byte(address as u32);
+        
+        let and_result = (self.registors.ac as u8) & value;
+
+        
+        self.registors.sr.z = and_result == 0;
+        self.registors.sr.n = (value & 0x80) != 0;
+        self.registors.sr.v = (value & 0x40) != 0;
+
+        self.cycle_count += 4;
     }
     
     
-    fn bmi_relative(&mut self){
+    fn bmi_relative(&mut self){ //branch on n = 1
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if self.registors.sr.n {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
     
-    fn bne_relative(&mut self){
+    fn bne_relative(&mut self){ //branch on z = 0
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if !self.registors.sr.z {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
     
-    fn bpl_relative(&mut self){
+    fn bpl_relative(&mut self){ //branch on n = 0
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if !self.registors.sr.n {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take
     }
     
-    fn bvc_relative(&mut self){
-        self.registors.pc += 1;   
-    }
-    
-    fn  bvs_relative(&mut self){
+    fn bvc_relative(&mut self){ //branch on v = 0
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
         self.registors.pc += 1;
+
+        if !self.registors.sr.v {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take 
+    }
+    
+    fn  bvs_relative(&mut self){ //branch on v = 1
+        let offset = self.memory.read_byte(self.registors.pc as u32) as i8;
+        self.registors.pc += 1;
+
+        if self.registors.sr.v {
+            let old_pc = self.registors.pc;
+            let new_pc = self.registors.pc.wrapping_add(offset as u16);
+
+            self.cycle_count += 1;  // +1 cycle for taken branch
+            if self.page_boundary_cross(old_pc, offset as u8) {
+                // Page crossed
+                self.cycle_count += 1;  //+2 total increase
+            }
+
+            self.registors.pc = new_pc;
+        }
+
+        self.cycle_count += 2;  //cycle count for not take 
     }
     
     fn clc(&mut self){
@@ -1877,7 +2095,7 @@ mod tests {
         cpu.memory.write_byte(0xFFFC, 0x00);
         cpu.memory.write_byte(0xFFFD, 0x80);
     
-        // x register = 0x04
+        // x registor = 0x04
         cpu.registors.x = 0x04;
     
     
@@ -1919,7 +2137,7 @@ mod tests {
         cpu.memory.write_byte(0xFFFC, 0x00);
         cpu.memory.write_byte(0xFFFD, 0x80);
     
-        // Set Y register to 0 (no offset)
+        // Set Y registor to 0 (no offset)
         cpu.registors.y = 0x00;
     
         // Zero page pointer at 0x20 → points to 0x12FF
