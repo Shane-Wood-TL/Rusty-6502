@@ -339,8 +339,6 @@ impl Cpu6502{
     pub fn init_registers(&mut self, reset_vector: u16){
         self.registors.pc = reset_vector;
         self.registors.sp = 0x0100;
-        //self.registors.x = 0;
-        //self.registors.y = 0;
         
         self.registors.sr = StatusRegisterValues::new();
         
@@ -391,6 +389,8 @@ impl Cpu6502{
             
             x if x == Opcodes::BccRelative    as u8 => self.bcc_relative(),
             
+            x if x == Opcodes::BcsRelative    as u8 => self.bcs_relative(),
+
             x if x == Opcodes::BeqRelative    as u8 => self.beq_relative(),
             
             x if x == Opcodes::BitZeropage    as u8 => self.bit_zero_page(),
@@ -569,7 +569,10 @@ impl Cpu6502{
         return self.cycle_count as i64;
     }
     
-    
+    fn page_boundary_cross(&self, base_address: u16, offset: u8) -> bool {
+        let effective_address = base_address.wrapping_add(offset as u16);
+        (base_address & 0xFF00) != (effective_address & 0xFF00)
+    }
     
     
     //LDA Commands
@@ -634,16 +637,15 @@ impl Cpu6502{
         
         self.registors.pc += 2; //lda_absolute_x absolute takes 3 bytes, one was already done in step
         
-        let x = self.registors.x as u16;
-        let effective_address = address.wrapping_add(x);
-        
-        if (address & 0xFF00) != (effective_address & 0xFF00) {
-            self.cycle_count += 5; // 5 if page boundry is crossed
-        } else{
-            self.cycle_count += 4;  //page boundry is not crossed
+        let x = self.registors.x;
+
+        if self.page_boundary_cross(address, x as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
         }
         
-        
+        let effective_address = address.wrapping_add(x as u16);
         let value = self.memory.read_byte(effective_address as u32);
         
         self.registors.ac = value as i8;
@@ -656,16 +658,15 @@ impl Cpu6502{
         
         self.registors.pc += 2; //lda_absolute_x absolute takes 3 bytes, one was already done in step
         
-        let y = self.registors.y as u16;
-        let effective_address = address.wrapping_add(y);
+        let y = self.registors.y;
         
-        if (address & 0xFF00) != (effective_address & 0xFF00) {
-            self.cycle_count += 5; // 5 if page boundry is crossed
-        } else{
-            self.cycle_count += 4;  //page boundry is not crossed
+        if self.page_boundary_cross(address, y as u8) {
+            self.cycle_count += 5; // page boundary crossed
+        } else {
+            self.cycle_count += 4; // no crossing
         }
         
-        
+        let effective_address = address.wrapping_add(y as u16);
         let value = self.memory.read_byte(effective_address as u32);
         
         self.registors.ac = value as i8;
@@ -697,15 +698,15 @@ impl Cpu6502{
         
         let base_address = self.read_u16(zero_page_operand as u16);
         
-        let effective_address = base_address.wrapping_add(self.registors.y as u16);
+        let y = self.registors.y;
 
-        println!("{}",effective_address);
-        if (base_address & 0xFF00) != (effective_address & 0xFF00) {
-            self.cycle_count += 6; // 6 if page boundry is crossed
-        } else{
-            self.cycle_count += 5;  //page boundry is not crossed
+        if self.page_boundary_cross(base_address, y as u8) {
+            self.cycle_count += 6; // Page boundary crossed
+        } else {
+            self.cycle_count += 5; // No crossing
         }
         
+        let effective_address = base_address.wrapping_add(y as u16);
         let value = self.memory.read_byte(effective_address as u32);
         
         self.registors.ac = value as i8;
@@ -716,109 +717,113 @@ impl Cpu6502{
     
     
     fn adc_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn adc_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn adc_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn adc_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn adc_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn adc_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn adc_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn adc_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
 
 
     fn and_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn and_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn and_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn and_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn and_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn and_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn and_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn and_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
 
 
     fn asl_accumulator_x(&mut self){
-        
+        self.registors.pc += 0;
     }
     fn asl_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn asl_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn asl_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn asl_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
     fn bcc_relative(&mut self){
-        
+        self.registors.pc += 1;
+    }
+    
+    fn bcs_relative(&mut self){
+        self.registors.pc += 1;
     }
     
     fn beq_relative(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     
     fn bit_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn bit_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
     fn bmi_relative(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     fn bne_relative(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     fn bpl_relative(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     fn bvc_relative(&mut self){
-        
+        self.registors.pc += 1;   
     }
     
-    fn bvs_relative(&mut self){
-        
+    fn  bvs_relative(&mut self){
+        self.registors.pc += 1;
     }
     
     fn clc(&mut self){
@@ -851,64 +856,64 @@ impl Cpu6502{
     
     
     fn cmp_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cmp_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cmp_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cmp_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn cmp_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn cmp_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn cmp_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cmp_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
 
 
     fn cpx_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cpx_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cpx_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
     fn cpy_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cpy_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn cpy_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
     fn dec_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn dec_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn dec_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn dec_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
@@ -922,42 +927,42 @@ impl Cpu6502{
     
     
     fn eor_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn eor_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn eor_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn eor_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn eor_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn eor_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn eor_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn eor_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     
     fn inc_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn inc_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn inc_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn inc_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
@@ -971,14 +976,14 @@ impl Cpu6502{
     
     
     fn jmp_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn jmp_indirect(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     fn jsr_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
@@ -1039,7 +1044,7 @@ impl Cpu6502{
         self.registors.sr.n = (value & 0x80) != 0;
     }
     fn ldx_absolute_y(&mut self){
-        println!("ldx_indirect_y");
+        println!("ldx_absolute_y");
         
         let zero_page_operand = self.memory.read_byte(self.registors.pc as u32);
         self.registors.pc += 2;
@@ -1048,11 +1053,10 @@ impl Cpu6502{
         
         let effective_address = base_address.wrapping_add(self.registors.y as u16);
 
-        println!("{}",effective_address);
-        if (base_address & 0xFF00) != (effective_address & 0xFF00) {
-            self.cycle_count += 5; // 6 if page boundry is crossed
-        } else{
-            self.cycle_count += 4;  //page boundry is not crossed
+        if self.page_boundary_cross(base_address, self.registors.y as u8) {
+            self.cycle_count += 5;
+        } else {
+            self.cycle_count += 4;
         }
         
         let value = self.memory.read_byte(effective_address as u32);
@@ -1128,11 +1132,11 @@ impl Cpu6502{
         
         let effective_address = base_address.wrapping_add(self.registors.x as u16);
 
-        println!("{}",effective_address);
-        if (base_address & 0xFF00) != (effective_address & 0xFF00) {
-            self.cycle_count += 5; // 6 if page boundry is crossed
-        } else{
-            self.cycle_count += 4;  //page boundry is not crossed
+
+        if self.page_boundary_cross(base_address, self.registors.x as u8) {
+            self.cycle_count += 5;
+        } else {
+            self.cycle_count += 4;
         }
         
         let value = self.memory.read_byte(effective_address as u32);
@@ -1146,16 +1150,16 @@ impl Cpu6502{
         
     }
     fn lsr_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn lsr_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn lsr_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn lsr_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     fn nop(&mut self){
@@ -1166,28 +1170,28 @@ impl Cpu6502{
     
     
     fn ora_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ora_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ora_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ora_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn ora_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn ora_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn ora_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ora_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     fn pha(&mut self){
@@ -1212,32 +1216,32 @@ impl Cpu6502{
         
     }
     fn rol_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn rol_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn rol_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn rol_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     fn ror_accumulator(&mut self){
         
     }
     fn ror_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ror_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn ror_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn ror_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     fn rti(&mut self){
@@ -1250,28 +1254,28 @@ impl Cpu6502{
     
     
     fn sbc_immediate(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sbc_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sbc_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sbc_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sbc_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sbc_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sbc_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sbc_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     fn sec(&mut self){
@@ -1288,47 +1292,47 @@ impl Cpu6502{
     
     
     fn sta_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sta_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sta_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sta_absolute_x(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sta_absolute_y(&mut self){
-        
+        self.registors.pc += 2;
     }
     fn sta_indirect_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sta_indirect_y(&mut self){
-        
+        self.registors.pc += 1;
     }
     
     
     fn stx_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn stx_zero_page_y(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn stx_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     
     fn sty_zero_page(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sty_zero_page_x(&mut self){
-        
+        self.registors.pc += 1;
     }
     fn sty_absolute(&mut self){
-        
+        self.registors.pc += 2;
     }
     
     fn tax(&mut self){
@@ -1689,4 +1693,3 @@ mod tests {
         assert_eq!(cpu.cycle_count, 6); // +1 cycle for page crossing
     }
 }
-
