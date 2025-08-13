@@ -2994,7 +2994,15 @@ impl Cpu6502{
 }
 
 
+fn main(){
+    let mut cpu = Cpu6502::new();
 
+    // Set reset vector to $8000
+    cpu.memory.write_byte(0xFFFC, 0x00);
+    cpu.memory.write_byte(0xFFFD, 0x80);
+
+    cpu.reset();
+}
 
 
 #[cfg(test)]
