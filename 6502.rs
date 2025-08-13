@@ -2817,47 +2817,129 @@ impl Cpu6502{
     
     
     fn sta_zero_page(&mut self){
-        self.registers.pc += 1;
+        let address = self.memory.read_byte(self.registers.pc as u32);
+        self.registers.pc += 1; 
+        
+        self.memory.write_byte(address as u32, self.registers.ac);
+        
+        self.cycle_count += 3;
     }
     fn sta_zero_page_x(&mut self){
+        let base_address = self.memory.read_byte(self.registers.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registers.pc += 1;
+        let address = base_address.wrapping_add(self.registers.x as u8) & 0xFF;
+
+        self.memory.write_byte(address as u32, self.registers.ac);
+        
+        self.cycle_count += 4;
     }
     fn sta_absolute(&mut self){
+        let address = self.read_u16(self.registers.pc);
         self.registers.pc += 2;
+
+        self.memory.write_byte(address as u32, self.registers.ac);
+        
+        self.cycle_count += 4;
     }
     fn sta_absolute_x(&mut self){
+        let address = self.read_u16(self.registers.pc);
+        
         self.registers.pc += 2;
+        let x = self.registers.x;
+        let effective_address = address.wrapping_add(x as u16);
+
+        self.memory.write_byte(effective_address as u32, self.registers.ac);
+
+        self.cycle_count += 5;
     }
     fn sta_absolute_y(&mut self){
+        let address = self.read_u16(self.registers.pc);
+        
         self.registers.pc += 2;
+        let y = self.registers.y;
+        let effective_address = address.wrapping_add(y as u16);
+
+        self.memory.write_byte(effective_address as u32, self.registers.ac);
+
+        self.cycle_count += 5;
     }
     fn sta_indirect_x(&mut self){
+        let zero_page_operand = self.memory.read_byte(self.registers.pc as u32);
         self.registers.pc += 1;
+        
+        let pointer_address = zero_page_operand.wrapping_add(self.registers.x as u8);
+        let effective_address = self.read_u16_zero_page(pointer_address as u8);
+
+        self.memory.write_byte(effective_address as u32, self.registers.ac);
+
+        self.cycle_count += 6;
     }
     fn sta_indirect_y(&mut self){
+        let zero_page_operand = self.memory.read_byte(self.registers.pc as u32);
         self.registers.pc += 1;
+        
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
+        
+        let y = self.registers.y;
+        let effective_address = base_address.wrapping_add(y as u16);
+
+        self.memory.write_byte(effective_address as u32, self.registers.ac);
+
+        self.cycle_count += 6;
     }
     
     
     fn stx_zero_page(&mut self){
-        self.registers.pc += 1;
+        let address = self.memory.read_byte(self.registers.pc as u32);
+        self.registers.pc += 1; 
+        
+        self.memory.write_byte(address as u32, self.registers.x);
+        
+        self.cycle_count += 3;
     }
     fn stx_zero_page_y(&mut self){
+        let base_address = self.memory.read_byte(self.registers.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registers.pc += 1;
+        let address = base_address.wrapping_add(self.registers.y as u8) & 0xFF;
+
+        self.memory.write_byte(address as u32, self.registers.ac);
+        
+        self.cycle_count += 4;
     }
     fn stx_absolute(&mut self){
+        let address = self.read_u16(self.registers.pc);
         self.registers.pc += 2;
+
+        self.memory.write_byte(address as u32, self.registers.x);
+        
+        self.cycle_count += 4;
     }
     
     
     fn sty_zero_page(&mut self){
-        self.registers.pc += 1;
+        let address = self.memory.read_byte(self.registers.pc as u32);
+        self.registers.pc += 1; 
+        
+        self.memory.write_byte(address as u32, self.registers.y);
+        
+        self.cycle_count += 3;
     }
     fn sty_zero_page_x(&mut self){
+        let base_address = self.memory.read_byte(self.registers.pc as u32); //takes an extra cycle since it also has to load this from memory
         self.registers.pc += 1;
+        let address = base_address.wrapping_add(self.registers.x as u8) & 0xFF;
+
+        self.memory.write_byte(address as u32, self.registers.ac);
+        
+        self.cycle_count += 4;
     }
     fn sty_absolute(&mut self){
+        let address = self.read_u16(self.registers.pc);
         self.registers.pc += 2;
+
+        self.memory.write_byte(address as u32, self.registers.y);
+        
+        self.cycle_count += 4;
     }
     
     fn tax(&mut self){
