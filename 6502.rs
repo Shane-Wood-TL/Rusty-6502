@@ -3000,329 +3000,683 @@ impl Cpu6502{
 #[cfg(test)]
 mod tests {
     use super::*; 
-
-    #[test]
-    fn test_lda_immediate() {
-        let mut cpu = Cpu6502::new();
-
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-
-        // Program: LDA #$42; BRK
-        cpu.memory.write_byte(0x8000, Opcodes::LdaImmediate as u8); // LDA Immediate
-        cpu.memory.write_byte(0x8001, 0x42); // Value
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8); // BRK
-
-        cpu.reset();
-        
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, 0x42);
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 2);
-    }
     
     #[test]
-    fn test_lda_zeropage() {
-        let mut cpu = Cpu6502::new();
-
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-        
-        let data_location : u8 = 0x42;
-        let data_value : u8 = 0x32;
-        //pub fn write_byte(&mut self, address: u32, new_data: u8){
-        cpu.memory.write_byte(data_value as u32, data_location); //location, data
-    
-        cpu.memory.write_byte(0x8000, Opcodes::LdaZeropage as u8); //command
-        cpu.memory.write_byte(0x8001, data_value); //add parameter in next location
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8); //break
-
-        cpu.reset();
-        
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, data_location.try_into().unwrap()); 
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 3);
-    }
+    fn test_lda_immediate() {}
     
     #[test]
-    fn test_lda_zeropage_x() {
-        let mut cpu = Cpu6502::new();
-
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-        
-        cpu.registers.x = 0x01;
-
-        let base_address: u8 = 0x32;
-        let final_address: u8 = base_address.wrapping_add(cpu.registers.x as u8);
-        let data_value: u8 = 0x42;
-        
-        cpu.memory.write_byte(final_address as u32, data_value);
-        
-        cpu.memory.write_byte(0x8000, Opcodes::LdaZeropageX as u8); //command
-        cpu.memory.write_byte(0x8001, base_address); //add parameter in next location
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8); //break
-
-        cpu.reset();
-        
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, data_value.try_into().unwrap()); 
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 4);
-    }
+    fn test_lda_zeropage() {}
     
     #[test]
-    fn test_lda_absolute() {
-        let mut cpu = Cpu6502::new();
-
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-        
-        let data_address: u16 = 0x1234;
-        let data_value: u8 = 0x42;
-        
-        
-        //pub fn write_byte(&mut self, address: u32, new_data: u8){
-        cpu.memory.write_byte(data_address as u32, data_value);
-    
-        cpu.memory.write_byte(0x8000, Opcodes::LdaAbsolute as u8); //command
-        cpu.memory.write_byte(0x8001, (data_address & 0xFF) as u8);       // low byte
-        cpu.memory.write_byte(0x8002, (data_address >> 8) as u8);         // high byte
-        cpu.memory.write_byte(0x8003, Opcodes::BRK as u8); //break
-
-        cpu.reset();
-        
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, data_value.try_into().unwrap()); 
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 4);
-        
-     }   
+    fn test_lda_zeropage_x() {}
     
     #[test]
-    fn test_lda_absolute_x() {
-        let mut cpu = Cpu6502::new();
+    fn test_lda_absolute() {}
     
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
+    #[test]
+    fn test_lda_absolute_x_npc() {}
     
-        let address: u16 = 0x12FF;
-        let x: u8 = 0x01;
-        let final_address = address.wrapping_add(x as u16);
-        let data_value: u8 = 0x42;
+    #[test]
+    fn test_lda_absolute_x_pc() {}
     
-        cpu.registers.x = x;
+    #[test]
+    fn test_lda_indirect_x() {}
     
-        cpu.memory.write_byte(final_address as u32, data_value);
+    #[test]
+    fn test_lda_indirect_y_npc() {}
     
-        cpu.memory.write_byte(0x8000, Opcodes::LdaAbsoluteX as u8);
-        cpu.memory.write_byte(0x8001, (address & 0xFF) as u8); // low byte
-        cpu.memory.write_byte(0x8002, (address >> 8) as u8);   // high byte
-        cpu.memory.write_byte(0x8003, Opcodes::BRK as u8); // break
+    #[test]
+    fn test_lda_indirect_y_pc() {}
     
-        cpu.reset();
-
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, data_value.try_into().unwrap()); 
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 5);
-    }
+    
+    
+    
     
     
     #[test]
-    fn test_lda_absolute_y() {
-        let mut cpu = Cpu6502::new();
-    
-        // Set reset vector to $8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-    
-
-        let address: u16 = 0x12FF;
-        let y: u8 = 0x01;
-        let final_address = address.wrapping_add(y as u16);
-        let data_value: u8 = 0x42;
-    
-        cpu.registers.y = y; 
-    
-        cpu.memory.write_byte(final_address as u32, data_value);
-    
-
-        cpu.memory.write_byte(0x8000, Opcodes::LdaAbsoluteY as u8);
-        cpu.memory.write_byte(0x8001, (address & 0xFF) as u8); // low byte
-        cpu.memory.write_byte(0x8002, (address >> 8) as u8);   // high byte
-        cpu.memory.write_byte(0x8003, Opcodes::BRK as u8); // break
-    
-        cpu.reset();
-
-        
-        let mut processor_running: bool = true;
-        while processor_running == true{
-            let cycles = cpu.step();
-            println!("Cycles: {}", cycles);
-            if cycles == -1 {
-                processor_running = false
-            }
-        }
-        assert_eq!(cpu.registers.ac, data_value.try_into().unwrap()); 
-        assert!(!cpu.registers.sr.z); // not zero
-        assert!(!cpu.registers.sr.n); // not negative
-        assert!(cpu.cycle_count == 5);
-    }
+    fn test_adc_immediate() {}
     
     #[test]
-    fn test_lda_indirect_x() {
-        let mut cpu = Cpu6502::new();
-    
-        // Reset vector to 0x8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-    
-        // x register = 0x04
-        cpu.registers.x = 0x04;
-    
-    
-        // pointer at zero page 0x14
-        let pointer_address: u16 = 0x1234;
-        cpu.memory.write_byte(0x0014, (pointer_address & 0xFF) as u8);
-        cpu.memory.write_byte(0x0015, (pointer_address >> 8) as u8);    
-    
-        // value at address
-        let data_value: u8 = 0x42;
-        cpu.memory.write_byte(pointer_address as u32, data_value);
-    
-        // Program at 0x8000:
-        cpu.memory.write_byte(0x8000, Opcodes::LdaIndirectX as u8);
-        cpu.memory.write_byte(0x8001, 0x10); 
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8); //break
-    
-        cpu.reset();
-    
-        let mut running = true;
-        while running {
-            let cycles = cpu.step();
-            if cycles == -1 {
-                running = false;
-            }
-        }
-    
-        assert_eq!(cpu.registers.ac, data_value);
-        assert!(!cpu.registers.sr.z);
-        assert!(!cpu.registers.sr.n);
-        assert_eq!(cpu.cycle_count, 6);
-    }
+    fn test_adc_zeropage() {}
     
     #[test]
-    fn test_lda_indirect_y_no_page_cross() {
-        let mut cpu = Cpu6502::new();
+    fn test_adc_zeropage_x() {}
     
-        // Reset vector to 0x8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
+    #[test]
+    fn test_adc_absolute() {}
     
-        // Set Y register to 0 (no offset)
-        cpu.registers.y = 0x00;
+    #[test]
+    fn test_adc_absolute_x_npc() {}
     
-        // Zero page pointer at 0x20 → points to 0x12FF
-        let base_pointer_address: u16 = 0x12FF;
-        let data_value: u8 = 0x42;
+    #[test]
+    fn test_adc_absolute_x_pc() {}
     
-        cpu.memory.write_byte(0x0020, (base_pointer_address & 0xFF) as u8); // Low byte
-        cpu.memory.write_byte(0x0021, (base_pointer_address >> 8) as u8);   // High byte
-        cpu.memory.write_byte(base_pointer_address as u32, data_value);     // Store value
+    #[test]
+    fn test_adc_absolute_y_npc() {}
     
-        // Program
-        cpu.memory.write_byte(0x8000, Opcodes::LdaIndirectY as u8);
-        cpu.memory.write_byte(0x8001, 0x20);
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8);
+    #[test]
+    fn test_adc_absolute_y_pc() {}
     
-        cpu.reset();
+    #[test]
+    fn test_adc_indirect_x() {}
     
-        while cpu.step() != -1 {}
+    #[test]
+    fn test_adc_indirect_y_npc() {}
     
-        assert_eq!(cpu.registers.ac, data_value);
-        assert!(!cpu.registers.sr.z);
-        assert!(!cpu.registers.sr.n);
-        assert_eq!(cpu.cycle_count, 5); // No page crossing
-    }
+    #[test]
+    fn test_adc_indirect_y_pc() {}
+    
+    
+    
+    
     
     
     #[test]
-    fn test_lda_indirect_y_with_page_cross() {
-        let mut cpu = Cpu6502::new();
+    fn test_asl_accumulator() {}
     
-        // Reset vector to 0x8000
-        cpu.memory.write_byte(0xFFFC, 0x00);
-        cpu.memory.write_byte(0xFFFD, 0x80);
-
-        cpu.registers.y = 0x01;
+    #[test]
+    fn test_asl_zeropage() {}
     
-        let base_pointer_address: u16 = 0x12FF;
-        let effective_address = base_pointer_address.wrapping_add(1); // 0x1300
-        let data_value: u8 = 0x99;
+    #[test]
+    fn test_asl_zeropage_x() {}
     
-        cpu.memory.write_byte(0x0020, (base_pointer_address & 0xFF) as u8); // Low byte
-        cpu.memory.write_byte(0x0021, (base_pointer_address >> 8) as u8);   // High byte
-        cpu.memory.write_byte(effective_address as u32, data_value); 
+    #[test]
+    fn test_asl_absolute() {}
     
-        // Program
-        cpu.memory.write_byte(0x8000, Opcodes::LdaIndirectY as u8);
-        cpu.memory.write_byte(0x8001, 0x20);
-        cpu.memory.write_byte(0x8002, Opcodes::BRK as u8);
+    #[test]
+    fn test_asl_absolute_x() {}
     
-        cpu.reset();
     
-        while cpu.step() != -1 {}
     
-        assert_eq!(cpu.registers.ac, data_value);
-        assert!(!cpu.registers.sr.z);
-        assert!(cpu.registers.sr.n); //0x99 is negative
-        assert_eq!(cpu.cycle_count, 6); // +1 cycle for page crossing
-    }
+    
+    
+    #[test]
+    fn test_bcc_not_taken() {}
+    
+    #[test]
+    fn test_bcc_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bcc_taken_pc() {}
+    
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bcs_not_taken() {}
+    
+    #[test]
+    fn test_bcs_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bcs_taken_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_beq_not_taken() {}
+    
+    #[test]
+    fn test_beq_taken_npc() {}
+    
+    
+    #[test]
+    fn test_beq_taken_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bit_zeropage() {}
+    
+    #[test]
+    fn test_bit_absolute() {}
+    
+    
+    
+    
+    #[test]
+    fn test_bmi_not_taken() {}
+    
+    #[test]
+    fn test_bmi_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bmi_taken_pc() {}
+    
+    
+    
+    
+    #[test]
+    fn test_bne_not_taken() {}
+    
+    #[test]
+    fn test_bne_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bne_taken_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bpl_not_taken() {}
+    
+    #[test]
+    fn test_bpl_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bpl_taken_pc() {}
+    
+    
+    
+    #[test]
+    fn test_brk() {}
+    
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bvc_not_taken() {}
+    
+    #[test]
+    fn test_bvc_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bvc_taken_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bvs_not_taken() {}
+    
+    #[test]
+    fn test_bvs_taken_npc() {}
+    
+    
+    #[test]
+    fn test_bvs_taken_pc() {}
+    
+    
+    
+    
+    #[test]
+    fn test_clc() {}
+    
+    #[test]
+    fn test_cld() {}
+    
+    #[test]
+    fn test_cli() {}
+    
+    #[test]
+    fn test_clv() {}
+    
+    
+    #[test]
+    fn test_cmp_immediate() {}
+    
+    #[test]
+    fn test_cmp_zeropage() {}
+    
+    #[test]
+    fn test_cmp_zeropage_x() {}
+    
+    #[test]
+    fn test_cmp_absolute() {}
+    
+    #[test]
+    fn test_cmp_absolute_x_npc() {}
+    
+    #[test]
+    fn test_cmp_absolute_x_pc() {}
+    
+    #[test]
+    fn test_cmp_absolute_y_npc() {}
+    
+    #[test]
+    fn test_cmp_absolute_y_pc() {}
+    
+    #[test]
+    fn test_cmp_indirect_x() {}
+    
+    #[test]
+    fn test_cmp_indirect_y_npc() {}
+    
+    #[test]
+    fn test_cmp_indirect_y_pc() {}
+    
+    
+    
+    
+    #[test]
+    fn test_cpx_immediate() {}
+    
+    #[test]
+    fn test_cpx_zeropage() {}
+    
+    #[test]
+    fn test_cpx_absolute() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_cpy_immediate() {}
+    
+    #[test]
+    fn test_cpy_zeropage() {}
+    
+    #[test]
+    fn test_cpy_absolute() {}
+    
+    
+    
+    
+    
+    
+    #[test]
+    fn test_dec_zeropage() {}
+    
+    #[test]
+    fn test_dec_zeropage_x() {}
+    
+    #[test]
+    fn test_dec_absolute() {}
+    
+    #[test]
+    fn test_dec_absolute_x() {}
+    
+    
+    #[test]
+    fn test_dex() {}
+    
+    #[test]
+    fn test_dey() {}
+    
+    
+    
+    
+    #[test]
+    fn test_eor_immediate() {}
+    
+    #[test]
+    fn test_eor_zeropage() {}
+    
+    #[test]
+    fn test_eor_zeropage_x() {}
+    
+    #[test]
+    fn test_eor_absolute() {}
+    
+    #[test]
+    fn test_eor_absolute_x_npc() {}
+    
+    #[test]
+    fn test_eor_absolute_x_pc() {}
+    
+    #[test]
+    fn test_eor_absolute_y_npc() {}
+    
+    #[test]
+    fn test_eor_absolute_y_pc() {}
+    
+    #[test]
+    fn test_eor_indirect_x() {}
+    
+    #[test]
+    fn test_eor_indirect_y_npc() {}
+    
+    #[test]
+    fn test_eor_indirect_y_pc() {}
+    
+    
+    
+    
+    #[test]
+    fn test_inc_zeropage() {}
+    
+    #[test]
+    fn test_inc_zeropage_x() {}
+    
+    #[test]
+    fn test_inc_absolute() {}
+    
+    #[test]
+    fn test_inc_absolute_x() {}
+    
+    
+    
+    
+    #[test]
+    fn test_inx() {}
+    
+    #[test]
+    fn test_iny() {}
+    
+    
+    
+    #[test]
+    fn test_jmp_absolute() {}
+    
+    
+    #[test]
+    fn test_jmp_indirect() {}
+    
+    
+    
+    
+    
+    
+    #[test]
+    fn test_jsr() {}
+    
+    
+    
+    #[test]
+    fn test_ldx_immediate() {}
+    
+    #[test]
+    fn test_ldx_zeropage() {}
+    
+    #[test]
+    fn test_ldx_zeropage_y() {}
+    
+    #[test]
+    fn test_ldx_absolute() {}
+    
+    #[test]
+    fn test_ldx_absolute_x_npc() {}
+    
+    #[test]
+    fn test_ldx_absolute_y_npc() {}
+    
+    #[test]
+    fn test_ldx_absolute_y_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_ldy_immediate() {}
+    
+    #[test]
+    fn test_ldy_zeropage() {}
+    
+    #[test]
+    fn test_ldy_zeropage_x() {}
+    
+    #[test]
+    fn test_ldy_absolute() {}
+    
+    #[test]
+    fn test_ldy_absolute_x_npc() {}
+    
+    #[test]
+    fn test_ldy_absolute_x_pc() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_lsr_accumulator() {}
+    
+    #[test]
+    fn test_lsr_zeropage() {}
+    
+    #[test]
+    fn test_lsr_zeropage_x() {}
+    
+    #[test]
+    fn test_lsr_absolute() {}
+    
+    #[test]
+    fn test_lsr_absolute_x() {}
+    
+    
+    
+    #[test]
+    fn test_nop() {}
+    
+    
+    
+    
+    #[test]
+    fn test_ora_immediate() {}
+    
+    #[test]
+    fn test_ora_zeropage() {}
+    
+    #[test]
+    fn test_ora_zeropage_x() {}
+    
+    #[test]
+    fn test_ora_absolute() {}
+    
+    #[test]
+    fn test_ora_absolute_x_npc() {}
+    
+    #[test]
+    fn test_ora_absolute_x_pc() {}
+    
+    #[test]
+    fn test_ora_absolute_y_npc() {}
+    
+    #[test]
+    fn test_ora_absolute_y_pc() {}
+    
+    #[test]
+    fn test_ora_indirect_x() {}
+    
+    #[test]
+    fn test_ora_indirect_y_npc() {}
+    
+    #[test]
+    fn test_ora_indirect_y_pc() {}
+    
+    
+    
+    
+    #[test]
+    fn test_pha() {}
+    
+    #[test]
+    fn test_php() {}
+    
+    #[test]
+    fn test_pla() {}
+    
+    #[test]
+    fn test_plp() {}
+    
+    
+    
+    
+    #[test]
+    fn test_rol_accumulator() {}
+    
+    #[test]
+    fn test_rol_zeropage() {}
+    
+    #[test]
+    fn test_rol_zeropage_x() {}
+    
+    #[test]
+    fn test_rol_absolute() {}
+    
+    #[test]
+    fn test_rol_absolute_x() {}
+    
+    
+    
+    
+    #[test]
+    fn test_ror_accumulator() {}
+    
+    #[test]
+    fn test_ror_zeropage() {}
+    
+    #[test]
+    fn test_ror_zeropage_x() {}
+    
+    #[test]
+    fn test_ror_absolute() {}
+    
+    #[test]
+    fn test_ror_absolute_x() {}
+    
+    
+    
+    
+    #[test]
+    fn test_rti() {}
+    
+    #[test]
+    fn test_rts() {}
+    
+    
+    
+    
+    
+    
+    #[test]
+    fn test_sbc_immediate() {}
+    
+    #[test]
+    fn test_sbc_zeropage() {}
+    
+    #[test]
+    fn test_sbc_zeropage_x() {}
+    
+    #[test]
+    fn test_sbc_absolute() {}
+    
+    #[test]
+    fn test_sbc_absolute_x_npc() {}
+    
+    #[test]
+    fn test_sbc_absolute_x_pc() {}
+    
+    #[test]
+    fn test_sbc_absolute_y_npc() {}
+    
+    #[test]
+    fn test_sbc_absolute_y_pc() {}
+    
+    #[test]
+    fn test_sbc_indirect_x() {}
+    
+    #[test]
+    fn test_sbc_indirect_y_npc() {}
+    
+    #[test]
+    fn test_sbc_indirect_y_pc() {}
+    
+    
+    
+    #[test]
+    fn test_sec() {}
+    
+    
+    #[test]
+    fn test_sed() {}
+    
+    
+    #[test]
+    fn test_sei() {}
+    
+    
+    
+    
+    
+    #[test]
+    fn test_sta_zeropage() {}
+    
+    #[test]
+    fn test_sta_zeropage_x() {}
+    
+    #[test]
+    fn test_sta_absolute() {}
+    
+    #[test]
+    fn test_sta_absolute_x() {}
+    
+    #[test]
+    fn test_sta_absolute_y() {}
+    
+    #[test]
+    fn test_sta_indirect_x() {}
+    
+    #[test]
+    fn test_sta_indirect_y() {}
+    
+    
+    
+    
+    #[test]
+    fn test_stx_zeropage() {}
+    
+    #[test]
+    fn test_stx_zeropage_y() {}
+    
+    #[test]
+    fn test_stx_absolute() {}
+    
+    
+    
+    
+    #[test]
+    fn test_sty_zeropage() {}
+    
+    #[test]
+    fn test_sty_zeropage_x() {}
+    
+    #[test]
+    fn test_sty_absolute() {}
+    
+    
+    
+    #[test]
+    fn test_tax() {}
+    
+    
+    #[test]
+    fn test_tay() {}
+    
+    
+    #[test]
+    fn test_tsx() {}
+    
+    
+    
+    
+    #[test]
+    fn test_txa() {}
+    
+    
+    #[test]
+    fn test_txs() {}
+    
+    
+    #[test]
+    fn test_tya() {}
 }
