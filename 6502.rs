@@ -3009,104 +3009,444 @@ fn main(){
 mod tests {
     use super::*; 
     
+    
+    fn setup_cpu_with_program(program: &[u8]) -> Cpu6502 {
+        let mut cpu = Cpu6502::new();
+
+        // Set the reset vector to 0x8000
+        cpu.memory.write_byte(0xFFFC, 0x00);
+        cpu.memory.write_byte(0xFFFD, 0x80);
+        cpu.reset();
+
+        // Load the program into memory at 0x8000
+        for (i, byte) in program.iter().enumerate() {
+            cpu.memory.write_byte(0x8000 + i as u32, *byte);
+        }
+        cpu
+    }
+    
+    #[test]
+    fn test_lda_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaImmediate as u8, 0x42 // LDA #$42
+        ]);
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x42);
+        assert!(!cpu.registers.sr.z); // not zero
+        assert!(!cpu.registers.sr.n); // not negative
+        assert_eq!(cpu.cycle_count, 2);
+    }
+    
+    #[test]
+    fn test_lda_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaZeropage as u8, 0x10 // LDA $10
+        ]);
+        cpu.memory.write_byte(0x0010, 0x84);
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x84);
+        assert!(!cpu.registers.sr.z);
+        assert!(cpu.registers.sr.n); // should be negative
+        assert_eq!(cpu.cycle_count, 3);
+    }
+    
+    #[test]
+    fn test_lda_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaZeropageX as u8, 0x10 // LDA $10,X
+        ]);
+        cpu.registers.x = 0x05;
+        cpu.memory.write_byte(0x0015, 0x12);
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x12);
+        assert_eq!(cpu.cycle_count, 4);
+    }
+    
+    #[test]
+    fn test_lda_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaAbsolute as u8, 0x00, 0x20 // LDA $2000
+        ]);
+        cpu.memory.write_byte(0x2000, 0xAA);
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0xAA);
+        assert_eq!(cpu.cycle_count, 4);
+    }
+    
+    #[test]
+    fn test_lda_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaAbsoluteX as u8, 0x10, 0x20 // LDA $2010,X
+        ]);
+        cpu.registers.x = 0x0F; // $2010 + $0F = $201F (no page cross)
+        cpu.memory.write_byte(0x201F, 0x42);
+        cpu.step();
+    
+        assert_eq!(cpu.registers.ac, 0x42);
+        assert!(!cpu.registers.sr.z);
+        assert!(!cpu.registers.sr.n);
+        assert_eq!(cpu.cycle_count, 4);
+    }
+    
+    #[test]
+    fn test_lda_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaAbsoluteX as u8, 0xFF, 0x20 // LDA $20FF,X
+        ]);
+        cpu.registers.x = 0x01; // $20FF + $01 = $2100 (page crossed)
+        cpu.memory.write_byte(0x2100, 0x99);
+        cpu.step();
+    
+        assert_eq!(cpu.registers.ac, 0x99);
+        assert!(!cpu.registers.sr.z);
+        assert!(cpu.registers.sr.n); 
+        assert_eq!(cpu.cycle_count, 5);
+    }
+    
+    #[test]
+    fn test_lda_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaIndirectX as u8, 0x10 // LDA ($10,X)
+        ]);
+    
+        cpu.registers.x = 0x04;
+    
+        // $10 + $04 = $14
+        cpu.memory.write_byte(0x0014, 0x00); // low byte
+        cpu.memory.write_byte(0x0015, 0x90); // high byte
+    
+        cpu.memory.write_byte(0x9000, 0xA5); // value to load
+    
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0xA5);
+        assert!(!cpu.registers.sr.z);
+        assert!(cpu.registers.sr.n); // 0xA5 = negative
+        
+        assert_eq!(cpu.cycle_count, 6);
+    }
+    
+    #[test]
+    fn test_lda_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaIndirectY as u8, 0x10 // LDA ($10),Y
+        ]);
+    
+        cpu.memory.write_byte(0x0010, 0x00); // low byte
+        cpu.memory.write_byte(0x0011, 0x90); // high 
+    
+        cpu.registers.y = 0x0A; // $9000 + $0A = $900A
+    
+        cpu.memory.write_byte(0x900A, 0x3C); // value to load
+    
+        let cycles = cpu.step();
+        assert_eq!(cpu.registers.ac, 0x3C);
+        assert_eq!(cycles, 5);
+    }
+    
     #[test]
-    fn test_lda_immediate() {}
+    fn test_lda_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdaIndirectY as u8, 0x10 // LDA ($10),Y
+        ]);
+
+        cpu.memory.write_byte(0x0010, 0xFF);
+        cpu.memory.write_byte(0x0011, 0x20); // base address = $20FF
+    
+        cpu.registers.y = 0x01; // $20FF + 1 = $2100
+    
+        cpu.memory.write_byte(0x2100, 0x77);
+    
+        let cycles = cpu.step();
+        assert_eq!(cpu.registers.ac, 0x77);
+        assert_eq!(cycles, 6);
+    }
     
+    
+    
+    
+    
+    
     #[test]
-    fn test_lda_zeropage() {}
+    fn test_adc_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_lda_zeropage_x() {}
+    fn test_adc_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_lda_absolute() {}
+    fn test_adc_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_lda_absolute_x_npc() {}
+    fn test_adc_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_lda_absolute_x_pc() {}
+    fn test_adc_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_lda_indirect_x() {}
+    fn test_adc_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_lda_indirect_y_npc() {}
+    fn test_adc_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_lda_indirect_y_pc() {}
+    fn test_adc_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
+    #[test]
+    fn test_adc_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
+    #[test]
+    fn test_adc_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
+    #[test]
+    fn test_adc_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
+
     #[test]
-    fn test_adc_immediate() {}
+    fn test_and_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_adc_zeropage() {}
+    fn test_and_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_adc_zeropage_x() {}
+    fn test_and_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_adc_absolute() {}
+    fn test_and_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_adc_absolute_x_npc() {}
+    fn test_and_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_adc_absolute_x_pc() {}
+    fn test_and_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_adc_absolute_y_npc() {}
+    fn test_and_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_adc_absolute_y_pc() {}
+    fn test_and_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_adc_indirect_x() {}
+    fn test_and_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_adc_indirect_y_npc() {}
+    fn test_and_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_adc_indirect_y_pc() {}
-    
-    
+    fn test_and_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
+
+
     
     
     
-    
     #[test]
-    fn test_asl_accumulator() {}
+    fn test_asl_accumulator() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_asl_zeropage() {}
+    fn test_asl_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_asl_zeropage_x() {}
+    fn test_asl_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_asl_absolute() {}
+    fn test_asl_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_asl_absolute_x() {}
+    fn test_asl_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     
     
     
     #[test]
-    fn test_bcc_not_taken() {}
+    fn test_bcc_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bcc_taken_npc() {}
+    fn test_bcc_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bcc_taken_pc() {}
+    fn test_bcc_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
@@ -3114,83 +3454,192 @@ mod tests {
     
     
     #[test]
-    fn test_bcs_not_taken() {}
+    fn test_bcs_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bcs_taken_npc() {}
+    fn test_bcs_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bcs_taken_pc() {}
+    fn test_bcs_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     
     #[test]
-    fn test_beq_not_taken() {}
+    fn test_beq_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_beq_taken_npc() {}
+    fn test_beq_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_beq_taken_pc() {}
+    fn test_beq_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     
     #[test]
-    fn test_bit_zeropage() {}
+    fn test_bit_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_bit_absolute() {}
+    fn test_bit_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
     
     #[test]
-    fn test_bmi_not_taken() {}
+    fn test_bmi_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bmi_taken_npc() {}
+    fn test_bmi_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bmi_taken_pc() {}
+    fn test_bmi_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     #[test]
-    fn test_bne_not_taken() {}
+    fn test_bne_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bne_taken_npc() {}
+    fn test_bne_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bne_taken_pc() {}
+    fn test_bne_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     
     #[test]
-    fn test_bpl_not_taken() {}
+    fn test_bpl_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bpl_taken_npc() {}
+    fn test_bpl_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bpl_taken_pc() {}
+    fn test_bpl_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     #[test]
-    fn test_brk() {}
+    fn test_brk() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert!(cpu.registers.sr.i);
+        assert_eq!(cycles, 7);
+    }
     
     
     
@@ -3198,102 +3647,267 @@ mod tests {
     
     
     #[test]
-    fn test_bvc_not_taken() {}
+    fn test_bvc_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bvc_taken_npc() {}
+    fn test_bvc_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bvc_taken_pc() {}
+    fn test_bvc_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     
     #[test]
-    fn test_bvs_not_taken() {}
+    fn test_bvs_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_bvs_taken_npc() {}
+    fn test_bvs_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 1);
+    }
     
     
     #[test]
-    fn test_bvs_taken_pc() {}
+    fn test_bvs_taken_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     #[test]
-    fn test_clc() {}
+    fn test_clc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Clc as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+        assert!(!cpu.registers.sr.c);
+    }
     
     #[test]
-    fn test_cld() {}
+    fn test_cld() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Cld as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+        assert!(!cpu.registers.sr.d);
+    }
     
     #[test]
-    fn test_cli() {}
+    fn test_cli() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Cli as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+        assert!(!cpu.registers.sr.i);
+    }
     
     #[test]
-    fn test_clv() {}
+    fn test_clv() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Clv as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+        assert!(!cpu.registers.sr.v);
+    }
     
     
     #[test]
-    fn test_cmp_immediate() {}
+    fn test_cmp_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_cmp_zeropage() {}
+    fn test_cmp_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_cmp_zeropage_x() {}
+    fn test_cmp_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_cmp_absolute() {}
+    fn test_cmp_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_cmp_absolute_x_npc() {}
+    fn test_cmp_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_cmp_absolute_x_pc() {}
+    fn test_cmp_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_cmp_absolute_y_npc() {}
+    fn test_cmp_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_cmp_absolute_y_pc() {}
+    fn test_cmp_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_cmp_indirect_x() {}
+    fn test_cmp_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_cmp_indirect_y_npc() {}
+    fn test_cmp_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_cmp_indirect_y_pc() {}
+    fn test_cmp_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
     
     #[test]
-    fn test_cpx_immediate() {}
+    fn test_cpx_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);}
     
     #[test]
-    fn test_cpx_zeropage() {}
+    fn test_cpx_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_cpx_absolute() {}
+    fn test_cpx_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
     
     
     #[test]
-    fn test_cpy_immediate() {}
+    fn test_cpy_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_cpy_zeropage() {}
+    fn test_cpy_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_cpy_absolute() {}
+    fn test_cpy_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
@@ -3301,92 +3915,242 @@ mod tests {
     
     
     #[test]
-    fn test_dec_zeropage() {}
+    fn test_dec_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_dec_zeropage_x() {}
+    fn test_dec_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_dec_absolute() {}
+    fn test_dec_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_dec_absolute_x() {}
+    fn test_dec_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     #[test]
-    fn test_dex() {}
+    fn test_dex() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_dey() {}
+    fn test_dey() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     #[test]
-    fn test_eor_immediate() {}
+    fn test_eor_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_eor_zeropage() {}
+    fn test_eor_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_eor_zeropage_x() {}
+    fn test_eor_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_eor_absolute() {}
+    fn test_eor_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_eor_absolute_x_npc() {}
+    fn test_eor_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_eor_absolute_x_pc() {}
+    fn test_eor_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_eor_absolute_y_npc() {}
+    fn test_eor_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_eor_absolute_y_pc() {}
+    fn test_eor_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_eor_indirect_x() {}
+    fn test_eor_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_eor_indirect_y_npc() {}
+    fn test_eor_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_eor_indirect_y_pc() {}
+    fn test_eor_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
     
     #[test]
-    fn test_inc_zeropage() {}
+    fn test_inc_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_inc_zeropage_x() {}
+    fn test_inc_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_inc_absolute() {}
+    fn test_inc_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_inc_absolute_x() {}
+    fn test_inc_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     
     
     #[test]
-    fn test_inx() {}
+    fn test_inx() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_iny() {}
+    fn test_iny() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     #[test]
-    fn test_jmp_absolute() {}
+    fn test_jmp_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     
     #[test]
-    fn test_jmp_indirect() {}
+    fn test_jmp_indirect() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     
     
@@ -3394,172 +4158,445 @@ mod tests {
     
     
     #[test]
-    fn test_jsr() {}
-    
+    fn test_jsr() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
-    #[test]
-    fn test_ldx_immediate() {}
     
     #[test]
-    fn test_ldx_zeropage() {}
+    fn test_ldx_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_ldx_zeropage_y() {}
+    fn test_ldx_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_ldx_absolute() {}
+    fn test_ldx_zeropage_y() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldx_absolute_x_npc() {}
+    fn test_ldx_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldx_absolute_y_npc() {}
+    fn test_ldx_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldx_absolute_y_pc() {}
-    
+    fn test_ldx_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
+
     
     
     
     
     #[test]
-    fn test_ldy_immediate() {}
+    fn test_ldy_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_ldy_zeropage() {}
+    fn test_ldy_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_ldy_zeropage_x() {}
+    fn test_ldy_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldy_absolute() {}
+    fn test_ldy_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldy_absolute_x_npc() {}
+    fn test_ldy_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ldy_absolute_x_pc() {}
+    fn test_ldy_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     
     
     
     
     #[test]
-    fn test_lsr_accumulator() {}
+    fn test_lsr_accumulator() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_lsr_zeropage() {}
+    fn test_lsr_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_lsr_zeropage_x() {}
+    fn test_lsr_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_lsr_absolute() {}
+    fn test_lsr_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_lsr_absolute_x() {}
+    fn test_lsr_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     
     #[test]
-    fn test_nop() {}
+    fn test_nop() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Nop as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     #[test]
-    fn test_ora_immediate() {}
+    fn test_ora_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_ora_zeropage() {}
+    fn test_ora_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_ora_zeropage_x() {}
+    fn test_ora_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ora_absolute() {}
+    fn test_ora_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ora_absolute_x_npc() {}
+    fn test_ora_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ora_absolute_x_pc() {}
+    fn test_ora_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_ora_absolute_y_npc() {}
+    fn test_ora_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_ora_absolute_y_pc() {}
+    fn test_ora_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_ora_indirect_x() {}
+    fn test_ora_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_ora_indirect_y_npc() {}
+    fn test_ora_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_ora_indirect_y_pc() {}
+    fn test_ora_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
     
     #[test]
-    fn test_pha() {}
+    fn test_pha() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_php() {}
+    fn test_php() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_pla() {}
+    fn test_pla() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_plp() {}
+    fn test_plp() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
     
     #[test]
-    fn test_rol_accumulator() {}
+    fn test_rol_accumulator() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_rol_zeropage() {}
+    fn test_rol_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_rol_zeropage_x() {}
+    fn test_rol_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_rol_absolute() {}
+    fn test_rol_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_rol_absolute_x() {}
+    fn test_rol_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     
     
     #[test]
-    fn test_ror_accumulator() {}
+    fn test_ror_accumulator() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_ror_zeropage() {}
+    fn test_ror_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_ror_zeropage_x() {}
+    fn test_ror_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_ror_absolute() {}
+    fn test_ror_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_ror_absolute_x() {}
+    fn test_ror_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 7);
+    }
     
     
     
     
     #[test]
-    fn test_rti() {}
+    fn test_rti() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_rts() {}
+    fn test_rts() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
@@ -3567,124 +4604,325 @@ mod tests {
     
     
     #[test]
-    fn test_sbc_immediate() {}
+    fn test_sbc_immediate() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     #[test]
-    fn test_sbc_zeropage() {}
+    fn test_sbc_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_sbc_zeropage_x() {}
+    fn test_sbc_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sbc_absolute() {}
+    fn test_sbc_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sbc_absolute_x_npc() {}
+    fn test_sbc_absolute_x_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sbc_absolute_x_pc() {}
+    fn test_sbc_absolute_x_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_sbc_absolute_y_npc() {}
+    fn test_sbc_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sbc_absolute_y_pc() {}
+    fn test_sbc_absolute_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_sbc_indirect_x() {}
+    fn test_sbc_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_sbc_indirect_y_npc() {}
+    fn test_sbc_indirect_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_sbc_indirect_y_pc() {}
+    fn test_sbc_indirect_y_pc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
     #[test]
-    fn test_sec() {}
+    fn test_sec() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Sec as u8
+        ]);
+        let cycles = cpu.step();
+        assert!(cpu.registers.sr.c);
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_sed() {}
+    fn test_sed() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Sed as u8
+        ]);
+        let cycles = cpu.step();
+        assert!(cpu.registers.sr.d);
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_sei() {}
+    fn test_sei() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::Sei as u8
+        ]);
+        let cycles = cpu.step();
+        assert!(cpu.registers.sr.i);
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     
     #[test]
-    fn test_sta_zeropage() {}
+    fn test_sta_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_sta_zeropage_x() {}
+    fn test_sta_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sta_absolute() {}
+    fn test_sta_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sta_absolute_x() {}
+    fn test_sta_absolute_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_sta_absolute_y() {}
+    fn test_sta_absolute_y() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 5);
+    }
     
     #[test]
-    fn test_sta_indirect_x() {}
+    fn test_sta_indirect_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     #[test]
-    fn test_sta_indirect_y() {}
+    fn test_sta_indirect_y() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 6);
+    }
     
     
     
     
     #[test]
-    fn test_stx_zeropage() {}
+    fn test_stx_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_stx_zeropage_y() {}
+    fn test_stx_zeropage_y() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_stx_absolute() {}
+    fn test_stx_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
     
     #[test]
-    fn test_sty_zeropage() {}
+    fn test_sty_zeropage() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 3);
+    }
     
     #[test]
-    fn test_sty_zeropage_x() {}
+    fn test_sty_zeropage_x() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     #[test]
-    fn test_sty_absolute() {}
+    fn test_sty_absolute() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 4);
+    }
     
     
     
     #[test]
-    fn test_tax() {}
+    fn test_tax() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_tay() {}
+    fn test_tay() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_tsx() {}
+    fn test_tsx() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     
     
     #[test]
-    fn test_txa() {}
+    fn test_txa() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_txs() {}
+    fn test_txs() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
     
     
     #[test]
-    fn test_tya() {}
+    fn test_tya() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BRK as u8
+        ]);
+        let cycles = cpu.step();
+        assert_eq!(cycles, 2);
+    }
 }
