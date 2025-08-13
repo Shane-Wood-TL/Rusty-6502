@@ -1,9 +1,11 @@
 # Rusty-6502
 Emulating a 6502 in Rust
 
-Commands Implemented (9 / 56):
-To be considered implemeted all versions of the command must also be created
-- [X] LDA
+All Original commands of the 6502 have been implemented
+
+Implemented
+Test Cases:
+- [ ] LDA
 - [ ] ADC
 - [ ] AND
 - [ ] ASL
@@ -14,13 +16,13 @@ To be considered implemeted all versions of the command must also be created
 - [ ] BMI
 - [ ] BNE
 - [ ] BPL
-- [X] BRK
+- [ ] BRK
 - [ ] BVC
 - [ ] BVS
-- [X] CLC
-- [X] CLD
-- [X] CLI
-- [X] CLV
+- [ ] CLC
+- [ ] CLD
+- [ ] CLI
+- [ ] CLV
 - [ ] CMP
 - [ ] CPX
 - [ ] CPY
@@ -33,10 +35,10 @@ To be considered implemeted all versions of the command must also be created
 - [ ] INY
 - [ ] JMP
 - [ ] JSR
-- [X] LDX
-- [X] LDY
+- [ ] LDX
+- [ ] LDY
 - [ ] LSR
-- [X] NOP
+- [ ] NOP
 - [ ] ORA
 - [ ] PHA
 - [ ] PHP
@@ -59,5 +61,3 @@ To be considered implemeted all versions of the command must also be created
 - [ ] TXA
 - [ ] TXS
 - [ ] TYA
-
-Test Cases:
