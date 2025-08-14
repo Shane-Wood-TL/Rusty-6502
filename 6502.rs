@@ -1373,7 +1373,7 @@ impl Cpu6502{
     
     fn cld(&mut self){
         println!("cld");
-        self.registers.sr.c = false;
+        self.registers.sr.d = false;
         self.cycle_count += 2;
         //self.registers.pc += 0; //cld takes no operands
     }
@@ -3487,8 +3487,9 @@ mod tests {
         assert_eq!(cpu.registers.sr.z, false); // not zero
         assert_eq!(cpu.registers.sr.n, true); //negative 
     }
-    /*
+    
     #[test]
+    #[ignore]
     fn test_and_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3498,6 +3499,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3507,6 +3509,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3516,6 +3519,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3525,6 +3529,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3534,6 +3539,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3543,6 +3549,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3552,6 +3559,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3561,6 +3569,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_and_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3574,6 +3583,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_asl_accumulator() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3583,6 +3593,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_asl_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3592,6 +3603,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_asl_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3601,6 +3613,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_asl_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3610,6 +3623,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_asl_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3623,6 +3637,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bcc_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3632,6 +3647,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bcc_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3642,6 +3658,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bcc_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3656,6 +3673,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bcs_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3665,6 +3683,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bcs_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3675,6 +3694,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bcs_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3688,6 +3708,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_beq_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3697,6 +3718,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_beq_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3707,6 +3729,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_beq_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3720,6 +3743,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bit_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3729,6 +3753,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bit_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3741,6 +3766,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bmi_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3750,6 +3776,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bmi_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3760,6 +3787,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bmi_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3772,6 +3800,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bne_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3781,6 +3810,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bne_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3791,6 +3821,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bne_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3804,6 +3835,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bpl_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3813,6 +3845,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bpl_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3823,6 +3856,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bpl_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3834,6 +3868,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_brk() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3849,6 +3884,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bvc_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3858,6 +3894,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bvc_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3868,6 +3905,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bvc_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3881,6 +3919,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bvs_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3890,6 +3929,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_bvs_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3900,6 +3940,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_bvs_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3909,13 +3950,13 @@ mod tests {
     }
     
     
-    
-    */ 
+
     #[test]
     fn test_clc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Clc as u8
         ]);
+        cpu.registers.sr.c = true;
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
         assert!(!cpu.registers.sr.c);
@@ -3926,6 +3967,7 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Cld as u8
         ]);
+        cpu.registers.sr.d = true;
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
         assert!(!cpu.registers.sr.d);
@@ -3936,6 +3978,7 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Cli as u8
         ]);
+        cpu.registers.sr.i = true;
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
         assert!(!cpu.registers.sr.i);
@@ -3946,13 +3989,15 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Clv as u8
         ]);
+        cpu.registers.sr.v = true;
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
         assert!(!cpu.registers.sr.v);
     }
     
-    /*
+    
     #[test]
+    #[ignore]
     fn test_cmp_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3962,6 +4007,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3971,6 +4017,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3980,6 +4027,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3989,6 +4037,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -3998,6 +4047,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4007,6 +4057,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4016,6 +4067,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4025,6 +4077,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4034,6 +4087,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4043,6 +4097,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cmp_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4055,6 +4110,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_cpx_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4063,6 +4119,7 @@ mod tests {
         assert_eq!(cycles, 2);}
     
     #[test]
+    #[ignore]
     fn test_cpx_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4072,6 +4129,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cpx_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4085,6 +4143,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_cpy_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4094,6 +4153,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cpy_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4103,6 +4163,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_cpy_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4117,6 +4178,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_dec_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4126,6 +4188,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_dec_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4135,6 +4198,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_dec_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4144,6 +4208,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_dec_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4154,6 +4219,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_dex() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4163,6 +4229,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_dey() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4175,6 +4242,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_eor_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4184,6 +4252,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4193,6 +4262,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4202,6 +4272,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4211,6 +4282,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4220,6 +4292,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4229,6 +4302,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4238,6 +4312,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4247,6 +4322,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4256,6 +4332,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4265,6 +4342,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_eor_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4277,6 +4355,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_inc_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4286,6 +4365,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_inc_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4295,6 +4375,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_inc_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4304,6 +4385,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_inc_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4316,6 +4398,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_inx() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4325,6 +4408,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_iny() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4336,6 +4420,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_jmp_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4346,6 +4431,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_jmp_indirect() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4360,6 +4446,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_jsr() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4371,6 +4458,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_ldx_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4380,6 +4468,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldx_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4389,6 +4478,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldx_zeropage_y() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4398,6 +4488,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldx_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4407,6 +4498,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldx_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4416,6 +4508,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldx_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4429,6 +4522,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_ldy_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4438,6 +4532,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldy_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4447,6 +4542,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldy_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4456,6 +4552,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldy_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4465,6 +4562,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldy_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4474,6 +4572,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ldy_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4487,6 +4586,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_lsr_accumulator() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4496,6 +4596,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_lsr_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4505,6 +4606,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_lsr_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4514,6 +4616,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_lsr_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4523,6 +4626,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_lsr_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4530,7 +4634,6 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 7);
     }
-    */ 
     
     
     #[test]
@@ -4564,9 +4667,10 @@ mod tests {
     }
     
     
-    /*  
+ 
     
     #[test]
+    #[ignore]
     fn test_ora_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4576,6 +4680,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4585,6 +4690,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4594,6 +4700,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4603,6 +4710,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4612,6 +4720,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4621,6 +4730,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4630,6 +4740,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4639,6 +4750,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4648,6 +4760,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4657,6 +4770,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ora_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4669,6 +4783,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_pha() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4678,6 +4793,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_php() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4687,6 +4803,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_pla() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4696,6 +4813,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_plp() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4708,6 +4826,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_rol_accumulator() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4717,6 +4836,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_rol_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4726,6 +4846,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_rol_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4735,6 +4856,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_rol_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4744,6 +4866,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_rol_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4756,6 +4879,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_ror_accumulator() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4765,6 +4889,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ror_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4774,6 +4899,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ror_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4783,6 +4909,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ror_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4792,6 +4919,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_ror_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4804,6 +4932,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_rti() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4813,6 +4942,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_rts() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4827,6 +4957,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_sbc_immediate() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4836,6 +4967,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4845,6 +4977,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4854,6 +4987,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4863,6 +4997,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4872,6 +5007,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4881,6 +5017,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4890,6 +5027,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4899,6 +5037,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4908,6 +5047,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4917,6 +5057,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sbc_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4924,7 +5065,7 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 6);
     }
-    */ 
+
     
     
     #[test]
@@ -4932,6 +5073,7 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Sec as u8
         ]);
+        cpu.registers.sr.c = false;
         let cycles = cpu.step();
         assert!(cpu.registers.sr.c);
         assert_eq!(cycles, 2);
@@ -4943,6 +5085,7 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Sed as u8
         ]);
+        cpu.registers.sr.d = false;
         let cycles = cpu.step();
         assert!(cpu.registers.sr.d);
         assert_eq!(cycles, 2);
@@ -4954,16 +5097,17 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Sei as u8
         ]);
+        cpu.registers.sr.i = false;
         let cycles = cpu.step();
         assert!(cpu.registers.sr.i);
         assert_eq!(cycles, 2);
     }
     
-    /*
     
     
     
     #[test]
+    #[ignore]
     fn test_sta_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4973,6 +5117,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4982,6 +5127,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -4991,6 +5137,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5000,6 +5147,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_absolute_y() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5009,6 +5157,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5018,6 +5167,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sta_indirect_y() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5030,6 +5180,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_stx_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5039,6 +5190,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_stx_zeropage_y() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5048,6 +5200,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_stx_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5060,6 +5213,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_sty_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5069,6 +5223,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sty_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5078,6 +5233,7 @@ mod tests {
     }
     
     #[test]
+    #[ignore]
     fn test_sty_absolute() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5089,6 +5245,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_tax() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5099,6 +5256,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_tay() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5109,6 +5267,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_tsx() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5121,6 +5280,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_txa() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5131,6 +5291,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_txs() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5141,6 +5302,7 @@ mod tests {
     
     
     #[test]
+    #[ignore]
     fn test_tya() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
@@ -5148,5 +5310,5 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
     }
-    */ 
+
 }
