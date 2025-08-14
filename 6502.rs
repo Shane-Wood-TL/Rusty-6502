@@ -1285,7 +1285,7 @@ impl Cpu6502{
     
     fn bne_relative(&mut self){ //branch on z = 0
         let offset = self.memory.read_byte(self.registers.pc as u32) as i8;
-        self.registers.pc += 1;
+        self.registers.pc = self.registers.pc.wrapping_add(1);
 
         if !self.registers.sr.z {
             let old_pc = self.registers.pc;
@@ -3911,91 +3911,154 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_bit_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BitZeropage as u8, 0x10,
+            Opcodes::BRK as u8   
         ]);
+    
+        
+        cpu.memory.write_byte(0x0010, 0xC1);
+        cpu.registers.ac = 0x81;
+    
         let cycles = cpu.step();
+    
         assert_eq!(cycles, 3);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true);
+        assert_eq!(cpu.registers.sr.v, true);
     }
     
     #[test]
-    #[ignore]
     fn test_bit_absolute() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BitAbsolute as u8, 0x00, 0x20,
+            Opcodes::BRK as u8                 
         ]);
-        let cycles = cpu.step();
+    
+
+        cpu.memory.write_byte(0x2000, 0xC1);
+        cpu.registers.ac = 0x81;
+    
+        let cycles = cpu.step(); 
+    
         assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true);
+        assert_eq!(cpu.registers.sr.v, true);
     }
     
     
     
     
     #[test]
-    #[ignore]
     fn test_bmi_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BmiRelative as u8, 0x02, 
+            Opcodes::Nop as u8,               
+            Opcodes::BRK as u8                
         ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+    
+        cpu.registers.sr.n = false; 
+    
+        let cycles = cpu.step(); 
+    
+        assert_eq!(cycles, 2); 
+        assert_eq!(cpu.registers.pc, 0x8002);
     }
     
     #[test]
-    #[ignore]
     fn test_bmi_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BmiRelative as u8, 0x02, 
+            Opcodes::Nop as u8,                 
+            Opcodes::BRK as u8                  
         ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+    
+        cpu.registers.sr.n = true;
+    
+        let cycles = cpu.step(); 
+    
+        assert_eq!(cycles, 3); 
+        assert_eq!(cpu.registers.pc, 0x8004);
     }
     
     
     #[test]
-    #[ignore]
     fn test_bmi_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
-        ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 2);
-    }
+        Opcodes::BmiRelative as u8, 0x05, 
+        Opcodes::Nop as u8,
+        Opcodes::Nop as u8,
+        Opcodes::Nop as u8,
+        Opcodes::Nop as u8,
+        Opcodes::BRK as u8
+    ]);
+
+    cpu.registers.pc = 0x80FD; 
+    cpu.memory.write_byte(0x80FD, Opcodes::BmiRelative as u8);
+    cpu.memory.write_byte(0x80FE, 0x05);
+
+    cpu.registers.sr.n = true;
+
+    let cycles = cpu.step();
+
+    assert_eq!(cycles, 4);
+    assert_eq!(cpu.registers.pc, 0x8104);
+}
     
     
     
     
     #[test]
-    #[ignore]
     fn test_bne_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BneRelative as u8, 0x06,  
+            Opcodes::Nop as u8,          
+            Opcodes::BRK as u8               
         ]);
+    
+        cpu.registers.sr.z = true; 
+    
         let cycles = cpu.step();
+    
         assert_eq!(cycles, 2);
+        assert_eq!(cpu.registers.pc, 0x8002);
     }
     
     #[test]
-    #[ignore]
     fn test_bne_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BneRelative as u8, 0x02,  
+            Opcodes::Nop as u8,                 
+            Opcodes::BRK as u8                  
         ]);
+    
+        cpu.registers.sr.z = false; 
+    
         let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+    
+        assert_eq!(cycles, 3);       
+        assert_eq!(cpu.registers.pc, 0x8004);
     }
     
     
     #[test]
     #[ignore]
     fn test_bne_taken_pc() {
-        let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+         let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BneRelative as u8, 0x02,
+            Opcodes::Nop as u8,
+            Opcodes::BRK as u8,
         ]);
+    
+        cpu.registers.pc = 0x80FF;
+        cpu.registers.sr.z = false; 
+    
         let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+    
+        assert_eq!(cycles, 4);      
+        assert_eq!(cpu.registers.pc, 0x8102); 
     }
     
     
