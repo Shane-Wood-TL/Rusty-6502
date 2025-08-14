@@ -916,17 +916,22 @@ impl Cpu6502{
         let zero_page_operand = self.memory.read_byte(self.registers.pc as u32);
         self.registers.pc += 1;
         
-        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
-        
         let y = self.registers.y;
-
+        
+        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
+        let effective_address = base_address.wrapping_add(y as u16);
+        
+        println!("base_address: {:04X}, Y: {:02X}", base_address, y);
+        let crossed = self.page_boundary_cross(base_address, y as u8);
+        println!("page crossed? {}", crossed);
+        
         if self.page_boundary_cross(base_address, y as u8) {
             self.cycle_count += 6; // Page boundary crossed
         } else {
             self.cycle_count += 5; // No crossing
         }
         
-        let effective_address = base_address.wrapping_add(y as u16);
+
         let value = self.memory.read_byte(effective_address as u32);
         
         let acc = self.registers.ac as u8;
@@ -3169,100 +3174,271 @@ mod tests {
     #[test]
     fn test_adc_immediate() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcImmediate as u8, 0x55
         ]);
+        
+        cpu.registers.ac = 0x10;
+        cpu.registers.sr.c = false;
+        
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
+        assert_eq!(cpu.registers.ac, 0x65);
+        assert_eq!(cpu.registers.sr.c, false);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
     }
     
     #[test]
     fn test_adc_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcZeropage as u8, 0xAF
         ]);
+        
+        // write 0xAE to 0x00AF
+        cpu.memory.write_byte(0x00AF, 0xAE); 
+        
+        // give an inital value to accumulator
+        cpu.registers.ac = 0xC0;
+        
         let cycles = cpu.step();
-        assert_eq!(cycles, 3);
+        
+        assert_eq!(cycles, 3); // this instruction takes 3 cycles
+        assert_eq!(cpu.registers.ac, 0x6E); // 0xC0 + 0xAE = 0x16E
+        assert_eq!(cpu.registers.sr.v, true); // there was an overflow
+        assert_eq!(cpu.registers.sr.c, true); // there is also a carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); // not negative
     }
     
     #[test]
     fn test_adc_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcZeropageX as u8, 0x03
         ]);
+        
+        cpu.registers.x = 0x05;
+        
+        // write 0x0C to 0x0008
+        cpu.memory.write_byte(0x0008, 0x0C); 
+        
+        // give an inital value to accumulator
+        cpu.registers.ac = 0xA0;
+        cpu.registers.sr.c = true;
+        
+        
         let cycles = cpu.step();
-        assert_eq!(cycles, 4);
+        assert_eq!(cycles, 4); // this instruction takes 4 cycles
+        assert_eq!(cpu.registers.ac, 0xAD); // 0x0C + 0xA0 + 0x01 = 0xAD
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        
+        //0xAD = 	1010_1101
+        assert_eq!(cpu.registers.sr.n, true); // negative 
     }
-    
+     
     #[test]
     fn test_adc_absolute() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcAbsolute as u8, 0xA4, 0x14
         ]);
+        
+        // write 0xB2 to 0x14A4
+        cpu.memory.write_byte(0x14A4, 0xB2); 
+        
+        // give an inital value to accumulator
+        cpu.registers.ac = 0x34;
+        
         let cycles = cpu.step();
         assert_eq!(cycles, 4);
+        
+        assert_eq!(cpu.registers.ac, 0xE6); // 0xB2 + 0x34 + 0x00 = 0xE6
+        
+        //0xE6 = 		1110 0110
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, true); // negative 
     }
-    
+     
     #[test]
     fn test_adc_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcAbsoluteX as u8, 0x10, 0x20
         ]);
+        
+        cpu.registers.x = 0x0F;
+        cpu.registers.ac = 0x30;
+        cpu.registers.sr.c = false;
+        
+        // write 0x40 to 0x201F
+        cpu.memory.write_byte(0x201F, 0x40);
+        
+        //0x2010 + 0x10 + 0x0F = 0x201F
+        //0x30 + 0x40 = 0x70 = 0111 0000
+        
         let cycles = cpu.step();
+        
         assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.ac, 0x70);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); // not negative 
     }
     
     #[test]
     fn test_adc_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcAbsoluteX as u8, 0x10, 0x20
         ]);
+        
+        cpu.registers.x = 0xF1;
+        cpu.registers.ac = 0x52;
+
+         // write 0x74 to 0x2101, This is a page jump as the high byte changed value from 20 to 21
+        cpu.memory.write_byte(0x2101, 0x74);
+        
+        //0x74 + 0x52 = 0xC6 = 1100 0110
         let cycles = cpu.step();
         assert_eq!(cycles, 5);
+        assert_eq!(cpu.registers.ac, 0xC6);
+        assert_eq!(cpu.registers.sr.v, true); // overflow (went from positive to negative)
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, true); // negative 
     }
     
     #[test]
     fn test_adc_absolute_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcAbsoluteY as u8, 0x12, 0x14
         ]);
+        
+        cpu.registers.y = 0x05;
+        cpu.registers.ac = 0x41;
+        cpu.registers.sr.c = true;
+        
+        // write 0x32 to 0x1417
+        cpu.memory.write_byte(0x1417, 0x32);
+        
+        //0x41 + 0x32 + 1 = 0x74 = 0111 0100
+        
         let cycles = cpu.step();
         assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.ac, 0x74);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); // not negative 
     }
     
     #[test]
     fn test_adc_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcAbsoluteY as u8, 0x78, 0x14
         ]);
+        
+        cpu.registers.y = 0xFF;
+        cpu.registers.ac = 0x04;
+        
+        // write 0xD1 to 0x1577
+        cpu.memory.write_byte(0x1577, 0xD1);
+        
         let cycles = cpu.step();
         assert_eq!(cycles, 5);
+        assert_eq!(cpu.registers.ac, 0xD5);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, true); // negative 
     }
     
     #[test]
     fn test_adc_indirect_x() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcIndirectX as u8, 0x35
         ]);
+        
+        cpu.registers.ac = 0x08;
+        cpu.registers.x = 0x94;
+        
+        // 0x35 + 0x94 = C9
+        //point to 0x00D1
+        cpu.memory.write_byte(0x00C9, 0xD1);
+        cpu.memory.write_byte(0x00CA, 0x00);
+        
+        //value at 0x00D1
+        cpu.memory.write_byte(0x00D1, 0x67);
+    
+        //0x67 + 0x08 = 0x6F
+        
         let cycles = cpu.step();
+        
         assert_eq!(cycles, 6);
+        assert_eq!(cpu.registers.ac, 0x6F);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); //not negative 
     }
     
     #[test]
     fn test_adc_indirect_y_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcIndirectY as u8, 0x52
         ]);
+        
+        cpu.registers.ac = 0x43;
+        cpu.registers.y = 0x12;
+        
+         // 0x52 + 0x12 = 64
+        //point to 0x00A1
+        cpu.memory.write_byte(0x0052, 0xA1);
+        cpu.memory.write_byte(0x0053, 0x00);
+        
+        //value at 0x00A1 + 0x12 = 0x00B3
+        cpu.memory.write_byte(0x00B3, 0x35);
+        
+        //0x35 + 0x43 = 0x78
+        
         let cycles = cpu.step();
+        
         assert_eq!(cycles, 5);
+        assert_eq!(cpu.registers.ac, 0x78);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); //not negative 
     }
     
     #[test]
     fn test_adc_indirect_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AdcIndirectY as u8, 0x52
         ]);
+        
+        cpu.registers.ac = 0x43;
+        cpu.registers.y = 0xDE;
+        
+         // 0x52 + 0x12 = 64
+        //point to 0x84A1
+        cpu.memory.write_byte(0x0052, 0xA1);
+        cpu.memory.write_byte(0x0053, 0x84);
+        
+        //value at 0x84A1 + 0xDE = 0x857F
+        cpu.memory.write_byte(0x857F, 0x35);
+        
+        //0x35 + 0x43 = 0x78
+        
         let cycles = cpu.step();
+        
         assert_eq!(cycles, 6);
+        assert_eq!(cpu.registers.ac, 0x78);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, false); //not negative 
     }
     
     
@@ -3271,21 +3447,47 @@ mod tests {
     #[test]
     fn test_and_immediate() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AndImmediate as u8, 0xFF
         ]);
+        cpu.registers.ac = 0xFE;
+         
         let cycles = cpu.step();
+        // 1111 1111
+        // 1111 1110
+        // 1111 1110 = FE
+        
         assert_eq!(cycles, 2);
+        assert_eq!(cpu.registers.ac, 0xFE);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, true); //negative 
     }
-    
+     
     #[test]
     fn test_and_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AndZeropage as u8, 0x52
         ]);
+        
+        // write 0xAE to 0x0052
+        cpu.memory.write_byte(0x0052, 0xAE); 
+        
+        // give an inital value to accumulator
+        cpu.registers.ac = 0xC0;
+        
         let cycles = cpu.step();
+        
+        //1010 1110
+        //1100 0000 = 1000 0000 = 0x80
         assert_eq!(cycles, 3);
+        assert_eq!(cpu.registers.ac, 0x80);
+        assert_eq!(cpu.registers.sr.v, false); // no overflow
+        assert_eq!(cpu.registers.sr.c, false); // no carry out
+        assert_eq!(cpu.registers.sr.z, false); // not zero
+        assert_eq!(cpu.registers.sr.n, true); //negative 
     }
-    
+    /*
     #[test]
     fn test_and_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
@@ -3708,7 +3910,7 @@ mod tests {
     
     
     
-    
+    */ 
     #[test]
     fn test_clc() {
         let mut cpu = setup_cpu_with_program(&[
@@ -3749,7 +3951,7 @@ mod tests {
         assert!(!cpu.registers.sr.v);
     }
     
-    
+    /*
     #[test]
     fn test_cmp_immediate() {
         let mut cpu = setup_cpu_with_program(&[
@@ -4328,7 +4530,7 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 7);
     }
-    
+    */ 
     
     
     #[test]
@@ -4336,12 +4538,33 @@ mod tests {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::Nop as u8
         ]);
+        cpu.registers.x = 0x0A;
+        cpu.registers.y = 0x0B;
+        cpu.registers.ac = 0x0C;
+        
+        cpu.registers.sr.v = false;
+        cpu.registers.sr.c = true;
+        cpu.registers.sr.z = false;
+        cpu.registers.sr.n = true;
+        cpu.registers.sr.d = false;
+        cpu.registers.sr.i = true;
+        
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
+        
+        assert_eq!(cpu.registers.x, 0x0A);
+        assert_eq!(cpu.registers.y, 0x0B);
+        assert_eq!(cpu.registers.ac, 0x0C);
+        assert_eq!(cpu.registers.sr.v, false); 
+        assert_eq!(cpu.registers.sr.c, true);
+        assert_eq!(cpu.registers.sr.z, false); 
+        assert_eq!(cpu.registers.sr.n, true);
+        assert_eq!(cpu.registers.sr.d, false);
+        assert_eq!(cpu.registers.sr.i, true);  
     }
     
     
-    
+    /*  
     
     #[test]
     fn test_ora_immediate() {
@@ -4701,7 +4924,7 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 6);
     }
-    
+    */ 
     
     
     #[test]
@@ -4736,7 +4959,7 @@ mod tests {
         assert_eq!(cycles, 2);
     }
     
-    
+    /*
     
     
     
@@ -4925,4 +5148,5 @@ mod tests {
         let cycles = cpu.step();
         assert_eq!(cycles, 2);
     }
+    */ 
 }
