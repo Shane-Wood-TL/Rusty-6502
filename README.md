@@ -3,10 +3,15 @@ Emulating a 6502 in Rust
 
 All Original commands of the 6502 have been implemented
 
-Implemented
-Test Cases:
-- [ ] LDA
-- [ ] ADC
+<br>
+
+Status of Implemented Test Cases: [![Rust](https://github.com/Shane-Wood-TL/Rusty-6502/actions/workflows/rust.yml/badge.svg)](https://github.com/Shane-Wood-TL/Rusty-6502/actions/workflows/rust.yml)
+
+<br>
+Implemented Test Cases:
+
+- [X] LDA
+- [X] ADC
 - [ ] AND
 - [ ] ASL
 - [ ] BCC
@@ -19,10 +24,10 @@ Test Cases:
 - [ ] BRK
 - [ ] BVC
 - [ ] BVS
-- [ ] CLC
-- [ ] CLD
-- [ ] CLI
-- [ ] CLV
+- [X] CLC
+- [X] CLD
+- [X] CLI
+- [X] CLV
 - [ ] CMP
 - [ ] CPX
 - [ ] CPY
@@ -38,7 +43,7 @@ Test Cases:
 - [ ] LDX
 - [ ] LDY
 - [ ] LSR
-- [ ] NOP
+- [X] NOP
 - [ ] ORA
 - [ ] PHA
 - [ ] PHP
@@ -49,9 +54,9 @@ Test Cases:
 - [ ] RTI
 - [ ] RTS
 - [ ] SBC
-- [ ] SEC
-- [ ] SED
-- [ ] SEI
+- [X] SEC
+- [X] SED
+- [X] SEI
 - [ ] STA
 - [ ] STX
 - [ ] STY
