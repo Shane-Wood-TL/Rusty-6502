@@ -437,7 +437,7 @@ impl Cpu6502{
             
             x if x == Opcodes::BplRelative    as u8 => self.bpl_relative(),
             
-            x if x == Opcodes::BRK            as u8 => {println!("BRK"); return -1;}
+            x if x == Opcodes::BRK            as u8 => {self.cycle_count+=7; self.registers.sr.i = true; return -1;}
             
             x if x == Opcodes::BvcRelative    as u8 => self.bvc_relative(),
             
@@ -609,7 +609,12 @@ impl Cpu6502{
         (base_address & 0xFF00) != (effective_address & 0xFF00)
     }
     
-    
+    fn page_boundary_cross_signed(&self, base_address: u16, offset: i8) -> bool {
+        let effective_address = base_address.wrapping_add(offset as i16 as u16);
+        (base_address & 0xFF00) != (effective_address & 0xFF00)
+    }
+
+
     //LDA Commands
     fn lda_immediate(&mut self){
         let value = self.memory.read_byte(self.registers.pc as u32);
@@ -1284,6 +1289,7 @@ impl Cpu6502{
     }
     
     fn bne_relative(&mut self){ //branch on z = 0
+        println!("bne relative");
         let offset = self.memory.read_byte(self.registers.pc as u32) as i8;
         self.registers.pc = self.registers.pc.wrapping_add(1);
 
@@ -1292,35 +1298,39 @@ impl Cpu6502{
             let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
 
             self.cycle_count += 1;  // +1 cycle for taken branch
-            if self.page_boundary_cross(old_pc, offset as u8) {
+            if self.page_boundary_cross_signed(old_pc, offset) {
                 // Page crossed
                 self.cycle_count += 1;  //+2 total increase
             }
 
             self.registers.pc = new_pc;
-        }
-
+        } 
         self.cycle_count += 2;  //cycle count for not take
+        
     }
     
     fn bpl_relative(&mut self){ //branch on n = 0
         let offset = self.memory.read_byte(self.registers.pc as u32) as i8;
-        self.registers.pc += 1;
-
+        self.registers.pc = self.registers.pc.wrapping_add(1);
+        
         if !self.registers.sr.n {
             let old_pc = self.registers.pc;
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
+            let new_pc = old_pc.wrapping_add(offset as i16 as u16);
 
-            self.cycle_count += 1;  // +1 cycle for taken branch
-            if self.page_boundary_cross(old_pc, offset as u8) {
-                // Page crossed
-                self.cycle_count += 1;  //+2 total increase
+
+            println!(
+                "old_pc: {:04X}, offset: {}, new_pc: {:04X}",
+                old_pc, offset, new_pc
+            );
+            self.cycle_count += 1;
+            if self.page_boundary_cross_signed(old_pc, offset) {
+                self.cycle_count += 1; 
             }
 
             self.registers.pc = new_pc;
         }
 
-        self.cycle_count += 2;  //cycle count for not take
+        self.cycle_count += 2;
     }
     
     fn bvc_relative(&mut self){ //branch on v = 0
@@ -4044,69 +4054,105 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_bne_taken_pc() {
-         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BneRelative as u8, 0x02,
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BneRelative as u8, 0x04,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::BRK as u8,
+        ]);
+
+        cpu.registers.pc = 0x80FD;
+        cpu.memory.write_byte(0x80FD, Opcodes::BneRelative as u8);
+        cpu.memory.write_byte(0x80FE, 0x04);
+
+        cpu.registers.sr.z = false; 
+
+        let cycles = cpu.step();
+
+        assert_eq!(cycles, 4); 
+        assert_eq!(cpu.registers.pc, 0x8103); 
+    }
+    
+    
+    
+    
+    
+    #[test]
+    fn test_bpl_not_taken() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BplRelative as u8, 0x05,
+            Opcodes::BRK as u8
+        ]);
+    
+        cpu.registers.pc = 0x8000;
+        cpu.memory.write_byte(0x8000, Opcodes::BplRelative as u8);
+        cpu.memory.write_byte(0x8001, 0x05);
+    
+        cpu.registers.sr.n = true;
+    
+        let cycles = cpu.step();
+    
+        assert_eq!(cycles, 2);          
+        assert_eq!(cpu.registers.pc, 0x8002);
+    }
+    
+    #[test]
+    fn test_bpl_taken_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BplRelative as u8, 0x03,
+            Opcodes::Nop as u8,
             Opcodes::Nop as u8,
             Opcodes::BRK as u8,
         ]);
     
-        cpu.registers.pc = 0x80FF;
-        cpu.registers.sr.z = false; 
+        cpu.registers.pc = 0x8000;
+        cpu.memory.write_byte(0x8000, Opcodes::BplRelative as u8);
+        cpu.memory.write_byte(0x8001, 0x03);
+    
+        cpu.registers.sr.n = false;
     
         let cycles = cpu.step();
     
-        assert_eq!(cycles, 4);      
-        assert_eq!(cpu.registers.pc, 0x8102); 
-    }
-    
-    
-    
-    
-    
-    #[test]
-    #[ignore]
-    fn test_bpl_not_taken() {
-        let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
-        ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 2);
-    }
-    
-    #[test]
-    #[ignore]
-    fn test_bpl_taken_npc() {
-        let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
-        ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+        assert_eq!(cycles, 3);             
+        assert_eq!(cpu.registers.pc, 0x8005);
     }
     
     
     #[test]
-    #[ignore]
     fn test_bpl_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BplRelative as u8, 0x04,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::BRK as u8,
         ]);
+    
+        cpu.registers.pc = 0x80FD;
+        cpu.memory.write_byte(0x80FD, Opcodes::BplRelative as u8);
+        cpu.memory.write_byte(0x80FE, 0x04);
+    
+        cpu.registers.sr.n = false;
+    
         let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+    
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.pc, 0x8103);
     }
     
     
     
     #[test]
-    #[ignore]
     fn test_brk() {
         let mut cpu = setup_cpu_with_program(&[
             Opcodes::BRK as u8
         ]);
         let cycles = cpu.step();
+        assert_eq!(cycles, -1);
         assert!(cpu.registers.sr.i);
-        assert_eq!(cycles, 7);
+        assert_eq!(cpu.cycle_count, 7);
     }
     
     
