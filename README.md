@@ -12,18 +12,18 @@ Implemented Test Cases:
 
 - [X] LDA
 - [X] ADC
-- [ ] AND
-- [ ] ASL
-- [ ] BCC
-- [ ] BCS  
-- [ ] BEQ
-- [ ] BIT
-- [ ] BMI
-- [ ] BNE
-- [ ] BPL
-- [ ] BRK
-- [ ] BVC
-- [ ] BVS
+- [X] AND
+- [X] ASL
+- [X] BCC
+- [X] BCS  
+- [X] BEQ
+- [X] BIT
+- [X] BMI
+- [X] BNE
+- [X] BPL
+- [X] BRK
+- [X] BVC
+- [X] BVS
 - [X] CLC
 - [X] CLD
 - [X] CLI
