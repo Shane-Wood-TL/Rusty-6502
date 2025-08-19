@@ -28,17 +28,17 @@ Implemented Test Cases:
 - [X] CLD
 - [X] CLI
 - [X] CLV
-- [ ] CMP
-- [ ] CPX
-- [ ] CPY
-- [ ] DEC
-- [ ] DEX
-- [ ] DEY
-- [ ] EOR
-- [ ] INC
-- [ ] INX
-- [ ] INY
-- [ ] JMP
+- [X] CMP
+- [X] CPX
+- [X] CPY
+- [X] DEC
+- [X] DEX
+- [X] DEY
+- [X] EOR
+- [X] INC
+- [X] INX
+- [X] INY
+- [X] JMP
 - [ ] JSR
 - [ ] LDX
 - [ ] LDY
