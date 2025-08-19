@@ -1339,10 +1339,10 @@ impl Cpu6502{
 
         if !self.registers.sr.v {
             let old_pc = self.registers.pc;
-            let new_pc = self.registers.pc.wrapping_add(offset as u16);
+            let new_pc = old_pc.wrapping_add(offset as i16 as u16);
 
             self.cycle_count += 1;  // +1 cycle for taken branch
-            if self.page_boundary_cross(old_pc, offset as u8) {
+            if self.page_boundary_cross_signed(old_pc, offset) {
                 // Page crossed
                 self.cycle_count += 1;  //+2 total increase
             }
@@ -3713,54 +3713,108 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_asl_accumulator() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AslAccumulator as u8
         ]);
+
+        cpu.registers.ac = 0x41;
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.ac, 0x82);
+        assert_eq!(cpu.registers.sr.c, false);
+        assert_eq!(cpu.registers.sr.z, false); 
+        assert_eq!(cpu.registers.sr.n, true);  
+        assert_eq!(cpu.registers.sr.v, false);
         assert_eq!(cycles, 2);
     }
+
     
     #[test]
-    #[ignore]
     fn test_asl_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AslZeropage as u8, 0x10  // ASL $10
         ]);
+
+        cpu.memory.write_byte(0x0010, 0x41);  
+
         let cycles = cpu.step();
+
+        let result = cpu.memory.read_byte(0x0010);
+
+        assert_eq!(result, 0x82);
+        assert_eq!(cpu.registers.sr.c, false);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true); 
         assert_eq!(cycles, 5);
     }
+
     
     #[test]
-    #[ignore]
     fn test_asl_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AslZeropageX as u8, 0x10 // ASL $10,X
         ]);
+
+        cpu.registers.x = 0x05;
+
+        cpu.memory.write_byte(0x0015, 0x41);
+
         let cycles = cpu.step();
+
+        let result = cpu.memory.read_byte(0x0015);
+
+
+        assert_eq!(result, 0x82);
+        assert_eq!(cpu.registers.sr.c, false); 
+        assert_eq!(cpu.registers.sr.z, false); 
+        assert_eq!(cpu.registers.sr.n, true);
         assert_eq!(cycles, 6);
     }
-    
+
+        
     #[test]
-    #[ignore]
     fn test_asl_absolute() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AslAbsolute as u8, 0x34, 0x12  // ASL $1234
         ]);
+
+
+        cpu.memory.write_byte(0x1234, 0x41);
+
         let cycles = cpu.step();
+
+        let result = cpu.memory.read_byte(0x1234);
+
+        assert_eq!(result, 0x82);
+        assert_eq!(cpu.registers.sr.c, false);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true);
         assert_eq!(cycles, 6);
     }
+
     
     #[test]
-    #[ignore]
     fn test_asl_absolute_x() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::AslAbsoluteX as u8, 0x00, 0x20  // ASL $2000,X
         ]);
+
+        cpu.registers.x = 0x05;
+
+        cpu.memory.write_byte(0x2005, 0x41);
         let cycles = cpu.step();
+
+        let result = cpu.memory.read_byte(0x2005);
+
+        assert_eq!(result, 0x82);
+        assert_eq!(cpu.registers.sr.c, false);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true);
         assert_eq!(cycles, 7);
     }
+
     
     
     
@@ -3825,35 +3879,63 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_bcs_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BcsRelative as u8, 0x05,   // BCS +5
+            Opcodes::LdaImmediate as u8, 0x42 // LDA #$42
         ]);
-        let cycles = cpu.step();
+
+        cpu.registers.sr.c = false;
+
+        let cycles = cpu.step(); 
+
+        
+        assert_eq!(cpu.registers.pc, 0x8002);
         assert_eq!(cycles, 2);
+
+        cpu.step(); // Execute LDA #$42
+        assert_eq!(cpu.registers.ac, 0x42);
     }
+
+
+
+
     
     #[test]
-    #[ignore]
     fn test_bcs_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BcsRelative as u8, 0x05,   // BCS +5 
+            0x00, 0x00, 0x00, 0x00, 0x00, 
+            Opcodes::LdaImmediate as u8, 0x42 // LDA #$42
         ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+
+        cpu.registers.sr.c = true; 
+        let cycles = cpu.step(); 
+
+        assert_eq!(cycles, 3);           
+        assert_eq!(cpu.registers.pc, 0x8007); 
+
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x42);
     }
+
     
     
     #[test]
-    #[ignore]
     fn test_bcs_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
+            Opcodes::BcsRelative as u8, 0x05,         // BCS +5
+            0x00, 0x00, 0x00, 0x00, 0x00,   
             Opcodes::BRK as u8
         ]);
+
+        cpu.registers.sr.c = true;
         let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+
+        assert_eq!(cpu.registers.pc, 0x8007);
+        assert_eq!(cycles, 3);
     }
+
     
     
     
@@ -4161,69 +4243,133 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_bvc_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvcRelative as u8, 0x05,           // BVC +5
+            Opcodes::LdaImmediate as u8, 0x42   // LDA #$42 (
         ]);
+
+        cpu.registers.sr.v = true; 
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.pc, 0x8002); 
         assert_eq!(cycles, 2);
+
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x42);
     }
+
     
     #[test]
-    #[ignore]
     fn test_bvc_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvcRelative as u8, 0x05,         // BVC +5
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            Opcodes::LdaImmediate as u8, 0x42 
         ]);
+
+        cpu.registers.sr.v = false;
+
         let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+
+        assert_eq!(cpu.registers.pc, 0x8007);
+        assert_eq!(cycles, 3);
+
+        cpu.step(); // execute LDA #$42
+        assert_eq!(cpu.registers.ac, 0x42);
     }
+
     
-    
+
     #[test]
-    #[ignore]
-    fn test_bvc_taken_pc() {
+    fn test_bvc_taken_pc_page_cross() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvcRelative as u8, 0x04,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::BRK as u8,
         ]);
+    
+        cpu.registers.pc = 0x80FD;
+        cpu.memory.write_byte(0x80FD, Opcodes::BplRelative as u8);
+        cpu.memory.write_byte(0x80FE, 0x04);
+    
+        cpu.registers.sr.v = false;
+    
         let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+    
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.pc, 0x8103);
     }
+
+
+
+
     
     
     
     
     
     #[test]
-    #[ignore]
     fn test_bvs_not_taken() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvsRelative as u8, 0x05,           // BVC +5
+            Opcodes::LdaImmediate as u8, 0x42   // LDA #$42 (
         ]);
+
+        cpu.registers.sr.v = false; 
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.pc, 0x8002); 
         assert_eq!(cycles, 2);
+
+        cpu.step();
+        assert_eq!(cpu.registers.ac, 0x42);
     }
     
     #[test]
-    #[ignore]
     fn test_bvs_taken_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvsRelative as u8, 0x05,         // BVC +5
+            0x00, 0x00, 0x00, 0x00, 0x00,
+            Opcodes::LdaImmediate as u8, 0x42 
         ]);
+
+        cpu.registers.sr.v = true;
+
         let cycles = cpu.step();
-        assert_eq!(cycles, 1);
+
+        assert_eq!(cpu.registers.pc, 0x8007);
+        assert_eq!(cycles, 3);
+
+        cpu.step(); // execute LDA #$42
+        assert_eq!(cpu.registers.ac, 0x42);
     }
     
     
     #[test]
-    #[ignore]
     fn test_bvs_taken_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::BvsRelative as u8, 0x04,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::Nop as u8,
+            Opcodes::BRK as u8,
         ]);
+    
+        cpu.registers.pc = 0x80FD;
+        cpu.memory.write_byte(0x80FD, Opcodes::BplRelative as u8);
+        cpu.memory.write_byte(0x80FE, 0x04);
+    
+        cpu.registers.sr.v = true;
+    
         let cycles = cpu.step();
-        assert_eq!(cycles, 2);
+    
+        assert_eq!(cycles, 4);
+        assert_eq!(cpu.registers.pc, 0x8103);
     }
     
     
