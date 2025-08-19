@@ -1964,9 +1964,9 @@ impl Cpu6502{
     }
     
     fn jsr_absolute(&mut self){
+        println!("PC at start: {:04X}", self.registers.pc);
         let base_address = self.read_u16(self.registers.pc);
-
-        let return_address = self.registers.pc + 2 - 1;
+        let return_address = self.registers.pc + 1;
 
         let high = (return_address >> 8) as u8;
         let low = (return_address & 0xFF) as u8;
@@ -1975,6 +1975,8 @@ impl Cpu6502{
         self.memory.stack_push(&mut self.registers.sp, low);
 
         self.registers.pc = base_address;
+
+        self.cycle_count += 6;
     }
     
     
@@ -2023,7 +2025,7 @@ impl Cpu6502{
         println!("ldx_absolute");
         let address = self.read_u16(self.registers.pc);
         
-        self.registers.pc += 2; //LDX absolute takes 3 bytes, one was already done in step
+        self.registers.pc = self.registers.pc.wrapping_add(2); //LDX absolute takes 3 bytes, one was already done in step
         
         self.cycle_count += 4;
         
@@ -2037,14 +2039,12 @@ impl Cpu6502{
     fn ldx_absolute_y(&mut self){
         println!("ldx_absolute_y");
         
-        let zero_page_operand = self.memory.read_byte(self.registers.pc as u32);
-        self.registers.pc += 2;
+        let zero_page_operand = self.read_u16(self.registers.pc as u16);
+        self.registers.pc = self.registers.pc.wrapping_add(2);
         
-        let base_address = self.read_u16_zero_page(zero_page_operand as u8);
-        
-        let effective_address = base_address.wrapping_add(self.registers.y as u16);
+        let effective_address = zero_page_operand.wrapping_add(self.registers.y as u16);
 
-        if self.page_boundary_cross(base_address, self.registers.y as u8) {
+        if self.page_boundary_cross(zero_page_operand, self.registers.y as u8) {
             self.cycle_count += 5;
         } else {
             self.cycle_count += 4;
@@ -2102,7 +2102,7 @@ impl Cpu6502{
         println!("ldy_absolute");
         let address = self.read_u16(self.registers.pc);
         
-        self.registers.pc += 2; //LDy absolute takes 3 bytes, one was already done in step
+       self.registers.pc = self.registers.pc.wrapping_add(2); //LDY absolute takes 3 bytes, one was already done in step
         
         self.cycle_count += 4;
         
@@ -2114,10 +2114,10 @@ impl Cpu6502{
         self.registers.sr.n = (value & 0x80) != 0;
     }
     fn ldy_absolute_x(&mut self){
-        println!("ldy_indirect_x");
+        println!("ldy_absolute_x");
         
-        let zero_page_operand = self.memory.read_byte(self.registers.pc as u32);
-        self.registers.pc += 2;
+        let zero_page_operand = self.read_u16(self.registers.pc as u16);
+        self.registers.pc = self.registers.pc.wrapping_add(2);
         
         let base_address = self.read_u16_zero_page(zero_page_operand as u8);
         
@@ -5255,140 +5255,242 @@ mod tests {
     
     
     #[test]
-    #[ignore]
     fn test_jsr() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::JsrAbsolute as u8, 0x34, 0x12, // JSR $1234
+            Opcodes::BRK as u8,
         ]);
+
+        let starting_sp = cpu.registers.sp;
         let cycles = cpu.step();
+
+        let return_hi = cpu.memory.read_byte(0x0100 + ((starting_sp - 0) as u16) as u32);
+        let return_lo = cpu.memory.read_byte(0x0100 + ((starting_sp - 1) as u16) as u32);
+        let return_address = (return_hi as u16) << 8 | return_lo as u16;
+
+        assert_eq!(return_address, 0x8002);
+        assert_eq!(cpu.registers.pc, 0x1234);
+        assert_eq!(cpu.registers.sp, starting_sp.wrapping_sub(2));
         assert_eq!(cycles, 6);
     }
     
     
     
     #[test]
-    #[ignore]
     fn test_ldx_immediate() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdxImmediate as u8, 0x42, // LDX #$42
         ]);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 2);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldx_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdxZeropage as u8, 0x10, // LDX $10
         ]);
+
+        cpu.memory.write_byte(0x0010, 0x37);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x37);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 3);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldx_zeropage_y() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdxZeropageY as u8, 0x10, // LDX $10,Y
         ]);
+
+        cpu.registers.y = 0x05;
+        cpu.memory.write_byte(0x0015, 0x99);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x99);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, true);
         assert_eq!(cycles, 4);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldx_absolute() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdxAbsolute as u8, 0x00, 0x90, // LDX $8000
         ]);
+
+        cpu.memory.write_byte(0x9000, 0x42);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 4);
     }
+
     
     #[test]
-    #[ignore]
-    fn test_ldx_absolute_y_npc() {
-        let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
-        ]);
-        let cycles = cpu.step();
-        assert_eq!(cycles, 4);
-    }
-    
-    #[test]
-    #[ignore]
     fn test_ldx_absolute_y_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdxAbsoluteY as u8, 0xFF, 0x00, // LDX $00FF,Y
         ]);
+
+        cpu.registers.y = 0x01;
+
+        cpu.memory.write_byte(0x0100, 0x37);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x37);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 5);
+    }
+
+
+    #[test]
+    fn test_ldx_absolute_y_npc() {
+        let mut cpu = setup_cpu_with_program(&[
+            Opcodes::LdxAbsoluteY as u8, 0x10, 0x00, // LDX $0010,Y
+        ]);
+
+        cpu.registers.y = 0x0F;
+
+        cpu.memory.write_byte(0x001F, 0x42);
+
+        let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.x, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
+        assert_eq!(cycles, 4);
     }
 
     
     
-    
-    
+    /*
     #[test]
-    #[ignore]
     fn test_ldy_immediate() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyImmediate as u8, 0x42,  // LDY #$42
+            Opcodes::BRK as u8,
         ]);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 2);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldy_zeropage() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyZeropage as u8, 0x10, // LDY $10
+            Opcodes::BRK as u8,
         ]);
+
+        cpu.memory.write_byte(0x0010, 0x42);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 3);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldy_zeropage_x() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyZeropageX as u8, 0x10, // LDY $10,X
+            Opcodes::BRK as u8,
         ]);
+
+        cpu.registers.x = 0x05;
+        cpu.memory.write_byte(0x0015, 0x37);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x37);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 4);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldy_absolute() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyAbsolute as u8, 0x00, 0x80, // LDY $8000
+            Opcodes::BRK as u8,
         ]);
+
+        cpu.memory.write_byte(0x8000, 0x55);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x55);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 4);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldy_absolute_x_npc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyAbsoluteX as u8, 0x00, 0x80, // LDY $8000,X
+            Opcodes::BRK as u8,
         ]);
+
+        cpu.registers.x = 0x01;
+        cpu.memory.write_byte(0x8001, 0x42);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x42);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 4);
     }
+
     
     #[test]
-    #[ignore]
     fn test_ldy_absolute_x_pc() {
         let mut cpu = setup_cpu_with_program(&[
-            Opcodes::BRK as u8
+            Opcodes::LdyAbsoluteX as u8, 0xFF, 0x80, // LDY $80FF,X
+            Opcodes::BRK as u8,
         ]);
+
+        cpu.registers.x = 0x01;
+        cpu.memory.write_byte(0x8100, 0x37);
+
         let cycles = cpu.step();
+
+        assert_eq!(cpu.registers.y, 0x37);
+        assert_eq!(cpu.registers.sr.z, false);
+        assert_eq!(cpu.registers.sr.n, false);
         assert_eq!(cycles, 5);
     }
+    */ 
     
     
     
