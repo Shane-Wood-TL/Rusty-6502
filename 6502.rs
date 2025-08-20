@@ -641,6 +641,8 @@ impl Cpu6502{
         
         self.registers.sr.z = value == 0;
         self.registers.sr.n = (value & 0x80) != 0;
+        
+        println!("Store: {:02X} at 0x{:02X}", address, value);
     }
     fn lda_zero_page_x(&mut self){
         println!("lda_zero_page");
@@ -775,6 +777,7 @@ impl Cpu6502{
         self.cycle_count += 2;
     }
     fn adc_zero_page(&mut self){
+        println!("adc_zero_page");
         let address = self.memory.read_byte(self.registers.pc as u32);
         self.registers.pc += 1;
 
@@ -782,7 +785,7 @@ impl Cpu6502{
         
         let acc = self.registers.ac as u8;
         let carry_in = if self.registers.sr.c { 1 } else { 0 };
-
+        println!("A: {}", acc);
         let result = acc as u16 + value as u16 + carry_in as u16;
         let result_byte = result as u8;
 
@@ -793,6 +796,9 @@ impl Cpu6502{
         self.registers.ac = result_byte as u8;
 
         self.cycle_count += 3;
+        println!("ADC: A: {:#X} + mem[{:#X}]={:#X}, carry={}, result = {}", 
+    self.registers.ac, address, value, self.registers.sr.c, result_byte);
+
     }
     fn adc_zero_page_x(&mut self){
         let base_address = self.memory.read_byte(self.registers.pc as u32); //takes an extra cycle since it also has to load this from memory
@@ -1295,7 +1301,7 @@ impl Cpu6502{
 
         if !self.registers.sr.z {
             let old_pc = self.registers.pc;
-            let new_pc = self.registers.pc.wrapping_add(offset as i16 as u16);
+            let new_pc = ((self.registers.pc as i32) + (offset as i32)) as u16;
 
             self.cycle_count += 1;  // +1 cycle for taken branch
             if self.page_boundary_cross_signed(old_pc, offset) {
@@ -1708,14 +1714,14 @@ impl Cpu6502{
     fn dex(&mut self){
         self.registers.x = self.registers.x.wrapping_sub(1);
         self.registers.sr.z  = self.registers.x == 0;
-        self.registers.sr.n = (self.registers.x as u8 & 0x80) != self.registers.x as u8;
+        self.registers.sr.n = (self.registers.x & 0x80) != 0;
         self.cycle_count += 2;
     }
     
     fn dey(&mut self){
         self.registers.y = self.registers.y.wrapping_sub(1);
         self.registers.sr.z  = self.registers.y == 0;
-        self.registers.sr.n = (self.registers.y as u8 & 0x80) != self.registers.y as u8;
+        self.registers.sr.n = (self.registers.y & 0x80) != 0;
         self.cycle_count += 2;
     }
     
@@ -2825,12 +2831,16 @@ impl Cpu6502{
     
     
     fn sta_zero_page(&mut self){
+        println!("sta_zero_page");
         let address = self.memory.read_byte(self.registers.pc as u32);
         self.registers.pc += 1; 
         
         self.memory.write_byte(address as u32, self.registers.ac);
         
         self.cycle_count += 3;
+        
+        println!("STA: mem[{:#X}] = {:#X}", address, self.registers.ac);
+
     }
     fn sta_zero_page_x(&mut self){
         let base_address = self.memory.read_byte(self.registers.pc as u32); //takes an extra cycle since it also has to load this from memory
@@ -6955,5 +6965,117 @@ mod tests {
         assert_eq!(cycles, 2);
     }
 
+    #[test]
+    fn test_fibonacci_sequence() {
+        use Opcodes::*;
 
+        let program = vec![
+            LdaImmediate as u8, 0x00,// LDA #$00
+            StaZeropage as u8, 0x00,// STA $00
+            LdaImmediate as u8, 0x01,// LDA #$01
+            StaZeropage as u8, 0x01,// STA $01
+            LdyImmediate as u8, 0x0A,// LDY #$0A (10 iterations)
+
+            LdaZeropage as u8, 0x00,// LDA $00
+            Clc as u8,// CLC
+            AdcZeropage as u8, 0x01,// ADC $01
+            StaZeropage as u8, 0x02,// STA $02
+            LdaZeropage as u8, 0x01,// LDA $01
+            StaZeropage as u8, 0x00,// STA $00
+            LdaZeropage as u8, 0x02,// LDA $02
+            StaZeropage as u8, 0x01,// STA $01 
+            Dey as u8,// DEY 1
+            BneRelative as u8, 0xEE,// BNE
+            BRK as u8,// BRK
+        ];
+
+        let mut cpu = setup_cpu_with_program(&program);
+
+        loop {
+            cpu.step();
+        
+            if cpu.memory.read_byte(cpu.registers.pc as u32) == Opcodes::BRK as u8 {
+                break;
+            }
+        }
+        let fib12 = cpu.memory.read_byte(0x02);
+        assert_eq!(fib12, 89);
+    }
+    
+    #[test]
+    fn test_count_up_loop() {
+        use Opcodes::*;
+    
+        let program = vec![
+            LdxImmediate as u8, 0x00,// LDX #$00
+            StxZeropage as u8, 0x00,// STX $00
+
+            LdxZeropage as u8, 0x00,// LDX $00
+            Inx as u8,// INX
+            StxZeropage as u8, 0x00,// STX $00
+            CpxImmediate as u8, 0xFF,// CPX #$FF
+            BneRelative as u8, 0xF7,// BNE loop
+            BRK as u8,// BRK
+        ];
+    
+        let mut cpu = setup_cpu_with_program(&program);
+    
+        loop {
+            let pc_before = cpu.registers.pc;
+            let opcode = cpu.memory.read_byte(pc_before as u32);
+            cpu.step();
+    
+            if opcode == Opcodes::BRK as u8 {
+                break;
+            }
+        }
+    
+        let final_value = cpu.memory.read_byte(0x00);
+        assert_eq!(final_value, 0xFF);
+    }
+    
+    
+    #[test]
+    fn test_multiplication_via_addition() {
+        use Opcodes::*;
+    
+        let program = vec![
+            LdxImmediate as u8, 0x05,// LDX #$05
+            StyZeropage as u8, 0x01,// STY $01
+            LdyImmediate as u8, 0x03,// LDY #$03
+            StyZeropage as u8, 0x01,// STY $01
+    
+            LdaImmediate as u8, 0x00,// LDA #$00
+            StaZeropage as u8, 0x02,// STA $02
+
+            CpxImmediate as u8, 0x00,// CPX #$00
+            BeqRelative as u8, 0x0B,// BEQ done
+    
+            Cld as u8,// CLD
+            LdaZeropage as u8, 0x02,// LDA $02
+            Clc as u8,// CLC
+            AdcZeropage as u8, 0x01,// ADC $01
+            StaZeropage as u8, 0x02,// STA $02
+    
+            Dex as u8,// DEX
+            BneRelative as u8, 0xF4,// BNE
+
+            BRK as u8,
+        ];
+    
+        let mut cpu = setup_cpu_with_program(&program);
+    
+        loop {
+            let pc_before = cpu.registers.pc;
+            let opcode = cpu.memory.read_byte(pc_before as u32);
+            cpu.step();
+    
+            if opcode == Opcodes::BRK as u8 {
+                break;
+            }
+        }
+    
+        let result = cpu.memory.read_byte(0x02);
+        assert_eq!(result, 15);
+    }
 }
