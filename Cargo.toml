@@ -1,5 +1,5 @@
 [package]
-name = "Rusty-6502"
+name = "rusty_6502"
 version = "0.0.1"
 edition = "2024"
 authors = ["townlake101@gmail.com"]
@@ -14,4 +14,4 @@ repository = "https://github.com/Shane-Wood-TL/Rusty-6502/"
 
 [[bin]]
 name = "rusty_6502"
-path = "6502.rs"
+path = "src/main.rs"
